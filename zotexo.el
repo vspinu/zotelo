@@ -87,7 +87,7 @@ The following keys are bound in this minor mode:
       (progn
         (unless (timerp zotexo--check-timer)
           (setq zotexo--check-timer
-                (run-with-timer 1 zotexo-check-interval 'zotexo--check-and-update-all)))
+                (run-with-idle-timer 1 zotexo-check-interval 'zotexo--check-and-update-all)))
         (setq zotexo--zotero-database-last-change nil) ;; reset the change tracker 
         )
     (unless 
@@ -492,7 +492,3 @@ output is inserted in that buffer. BUF is erased before use.
 (add-hook 'inferior-moz-hook 'zotexo-insert-busy-hook)
 
 ;;; zotexo.el ends here.
-
-;; Local Variables:
-;; zotexo-auto-update: t
-;; End:
