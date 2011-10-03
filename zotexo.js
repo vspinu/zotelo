@@ -25,23 +25,6 @@ render_collection();
 
 
 
-var filename=('/home/vitoshka/works/foundations/estension_inf_general/extension_inf_general.bib');
-var prefs = Components.classes['@mozilla.org/preferences-service;1'].getService(Components.interfaces.nsIPrefService).getBranch('extensions.zotero.');
-var recColl = prefs.getBoolPref('recursiveCollections');
-prefs.setBoolPref('recursiveCollections', true);
-var file = Components.classes['@mozilla.org/file/local;1'].createInstance(Components.interfaces.nsILocalFile);
-file.initWithPath(filename);
-
-var zotero = Components.classes['@zotero.org/Zotero;1'].getService(Components.interfaces.nsISupports).wrappedJSObject;
-var translator = new zotero.Translate('export');
-var collections = zotero.getCollections();
-var collection = collections[113];
-translator.setCollection(collection);
-translator.setLocation(file);
-translator.setTranslator('9cb70025-a888-4a29-a210-93ec52da40d4');
-translator.translate();
-prefs.setBoolPref('recursiveCollections', recColl);
-
 
 var filename=('%s');
 var prefs = Components.classes['@mozilla.org/preferences-service;1'].getService(Components.interfaces.nsIPrefService).getBranch('extensions.zotero.');

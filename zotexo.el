@@ -41,14 +41,14 @@
 ;;;; Change log:
 ;;;; Code:
 
-
-(require 'moz)
+;; (require 'moz)
 (require 'reftex)
 
 (defvar zotexo-minor-mode-map
   (let ((map (make-sparse-keymap)))
     (define-key map "\C-czu" 'zotexo-update-database)
     (define-key map "\C-czs" 'zotexo-set-collection)
+    (define-key map "\C-czc" 'zotexo-set-collection)
     (define-key map "\C-czm" 'zotexo-mark-for-auto-update)
     map))
 
@@ -106,11 +106,12 @@ The following keys are bound in this minor mode:
 ;; [nil 20104 24819 766111 1 zotexo--check-and-update-all nil nil]
 (defun zotexo--check-and-update-all ()
   "Function run with `zotexo--check-timer'."
-  (let ((last-change (zotexo--get-zotero-db-change-time))
+  (let ((last-change (zotexo--get-zotero-change-time-if-changed))
         out id)
     (when last-change ;; if nil no change have been made and no new zotexo-minor-mode trigers 
+      (message "Zotexo checking for updates ... ")
       (dolist (b  (buffer-list))
-        (when (and
+        (when (and ;; minor-mode active?, collection is set?, auto-update-all?, auto-update?
                (buffer-local-value 'zotexo-minor-mode b)
                (assoc 'zotero-collection (buffer-local-value 'file-local-variables-alist b))
                (let ((auto-update
@@ -123,11 +124,16 @@ The following keys are bound in this minor mode:
             (setq id (zotexo-update-database last-change)))
           (when id
             (append (cons (buffer-name b) id) out)
-            )))
+            ))
+        )
       (setq zotexo--zotero-database-last-change last-change) ; set it only if all updates are successful 
-      (message "Zotexo: updated files %s " out)
-      )
-    ))
+      
+      (if (> (length out) 0)
+          (message "Zotexo updated %s files : %s " (length out) out)
+        (message "Updated 0 files")
+        (message nil)
+        )
+    )))
 
 (defvar zotexo-zotero-database-location nil
   "Location of zotero sql database.
@@ -141,23 +147,38 @@ repl.print(zotero.getZoteroDatabase().path);")
 (defvar zotexo--zotero-database-last-change nil
   "Internal, used to track zotero changes.")
 
-(defun zotexo--get-zotero-db-change-time ()
+(defun zotexo--get-zotero-change-time-if-changed ()
   "Return the time of zotero last change if changed or nil otherwise."
 
   (unless zotexo-zotero-database-location
-    (with-current-buffer (moz-command zotexo--get-zotero-database-js)
-      (let ((file (buffer-substring-no-properties (point-min) (max (1- (point-max)) 0))))
-        (if (file-exists-p file)
-            (setq zotexo-zotero-database-location file)
-          (error "MozRepl didn't return a valid database location. \nPlease try again or set it manually. \n %s" file) )
-        )))
-  (let ((zdb-last-mod (nth 5 (file-attributes zotexo-zotero-database-location))))
+    (setq zotexo-zotero-database-location (zotexo--get-zotero-db-location)))
+  (let ((zdb-last-mod (zotexo--get-zotero-last-change-time)))
     (if zotexo--zotero-database-last-change ;; is set to nil each time new .tex buffer is opened. 
         (when (time-less-p zotexo--zotero-database-last-change zdb-last-mod)
-           zdb-last-mod) ;; return nil otherwise
+          zdb-last-mod) ;; return nil otherwise
       zdb-last-mod))
   )
-  
+
+(defun zotexo--get-zotero-db-location ()
+  (with-current-buffer (moz-command zotexo--get-zotero-database-js)
+    (let ((file (buffer-substring-no-properties (point-min) (max (1- (point-max)) 0))))
+      (if (file-exists-p file)
+          file
+        (error "MozRepl didn't return a valid database location. \nPlease try again or set it manually. \n %s" file) )
+      )))
+
+(defun zotexo--get-zotero-last-change-time ()
+  (unless zotexo-zotero-database-location
+    (setq zotexo-zotero-database-location (zotexo--get-zotero-db-location)))
+  (let* ((zsql zotexo-zotero-database-location)
+         (lt (nth 5 (file-attributes zsql)))
+         (zsql-journal (concat zsql "-journal"))
+         (lt-journal (nth 5 (file-attributes zsql-journal)))
+         (zsql.tmp (concat zsql ".tmp"))
+         (lt.tmp (nth 5 (file-attributes zsql.tmp))))
+    ;; (print (list (decode-time lt) (decode-time lt-journal) (decode-time lt.tmp)))
+    (car (last (sort* (delq nil (list lt lt-journal lt.tmp)) 'time-less-p)))
+    ))
 
 (defvar zotexo-use-ido t
   "If t will try to use ido interface")
@@ -228,40 +249,44 @@ non-interactive mode. Error if bibfile is not found. Error if
 collection is not found by MozRepl. "
   (interactive)
   (let ((bibfile (car (zotexo--locate-bibliography-files default-directory)))
-        (proc  (inferior-moz-process))
+        (proc  (zotexo--moz-process))
         (id (zotexo--get-local-collection-id))
         (buf (get-buffer-create "*moz-command-output*"))
+        (file-name (file-name-nondirectory (file-name-sans-extension (buffer-file-name))))
         all-colls-p cstr bib-last-change)
-    (if (null bibfile)
-        (when (called-interactively-p)
-            (message "Cannot find bibliography reference for file '%s' or it's included files." (buffer-name)))
-      (setq bib-last-change (nth 5 (file-attributes bibfile))) ;; nil if bibfile does not exist yet
-      (when (and (called-interactively-p) (null id))
-        (zotexo-set-collection "Zotero collection is not set. Choose one: " t)
-        (setq id (zotexo--get-local-collection-id)))
-      (when (and id
-                 (or (null last-change)
-                     (null bib-last-change)
-                     (time-less-p bib-last-change last-change)))
-        (setq all-colls-p
-              (if (equal id "0")
-                  "false"
-                "true"))
-        (setq cstr (format zotexo--export-collection-js bibfile id all-colls-p))
-        ;; (print cstr)
-        (message "Updating '%s' ..." (file-name-nondirectory bibfile))
-        (moz-command cstr buf) ;; moz-command stalls emacs
-        (with-current-buffer buf
-          (if (equal (buffer-string) "")
-              (message "'%s' updated successfully" (file-name-nondirectory bibfile))
-            (goto-char (point-min))
-            (let ((mozerr (re-search-forward "MozError:" nil t)))
-              (if mozerr
-                  (signal 'MozError (buffer-substring-no-properties (point) (1- (point-max))))
-                (message "Unexpected MozRepl output, this  might indicate an error:\n%s"
-                         (buffer-substring-no-properties (point-min) (poinnt-max))))))
-          id)
-        ))))
+    (when (null bibfile)
+      (setq file-name (concat file-name "_zotexo_.bib"))
+      (setq bibfile (concat default-directory file-name ))
+      (message "Cannot find bibliography reference in the file '%s'.\n  Ussing '%s' for BibTeX export." (buffer-name) file-name)
+      )
+    (setq bib-last-change (nth 5 (file-attributes bibfile))) ;; nil if bibfile does not exist yet
+    (when (and (called-interactively-p) (null id))
+      (zotexo-set-collection "Zotero collection is not set. Choose one: " t)
+      (setq id (zotexo--get-local-collection-id)))
+    (when (and id
+               (or (null last-change)
+                   (null bib-last-change)
+                   (time-less-p bib-last-change last-change)))
+      (setq all-colls-p
+            (if (equal id "0")
+                "false"
+              "true"))
+      (setq cstr (format zotexo--export-collection-js bibfile id all-colls-p))
+      ;; (print cstr)
+      (message "Updating '%s' ..." (file-name-nondirectory bibfile))
+      (moz-command cstr buf) ;; moz-command stalls emacs
+      (with-current-buffer buf
+        (if (equal (buffer-string) "")
+            (message "'%s' updated successfully" (file-name-nondirectory bibfile))
+          (goto-char (point-min))
+          (let ((mozerr (re-search-forward "MozError:" nil t)))
+            (if mozerr
+                (signal 'MozError (buffer-substring-no-properties (point) (1- (point-max))))
+              (message "Unexpected MozRepl output, this  might indicate an error:\n%s"
+                       (buffer-substring-no-properties (point-min) (point-max))))))
+        id)
+      )
+    ))
 
 (defun zotexo--locate-bibliography-files (master-dir)
   ;; Scan buffer for bibliography macro and return as a list.
@@ -395,6 +420,78 @@ the end of the file.
 
 
 ;;;; Moz utilities
+
+(defvar zotexo--moz-host "localhost")
+(defvar zotexo--moz-port 4242)
+(defvar zotexo--moz-buffer nil)
+
+(defun zotexo--moz-process ()
+  "Return inferior MozRepl process.  Start it if necessary."
+  (or (if (buffer-live-p zotexo--moz-buffer)
+          (get-buffer-process zotexo--moz-buffer))
+      (progn
+        (zotexo--moz-start-process)
+        (zotexo--moz-process))))
+
+(defun zotexo--moz-start-process ()
+  "Start mozrepl process and connect to Firefox.
+
+Note that you have to start the MozRepl server from Firefox."
+    (interactive)
+    (condition-case err
+        (progn
+          (let (proc)
+          (setq zotexo--moz-buffer (get-buffer-create "*ZotexoMozRepl*"))
+          (setq proc (open-network-stream "ZotexoMozRepl" zotexo--moz-buffer
+                                          zotexo--moz-host zotexo--moz-port))
+          (sleep-for 0 100)
+          (with-current-buffer zotexo--moz-buffer
+            (set-marker (process-mark proc) (point-max)))
+          (set-process-filter proc 'moz-ordinary-insertion-filter)))
+      (file-error
+       (with-output-to-temp-buffer "*MozRepl Error*"
+         (with-current-buffer (get-buffer "*MozRepl Error*")
+           (insert "Can't start MozRepl, the error message was:\n\n     "
+                   (error-message-string err)
+                   "\n"
+                   "\nA possible reason is that you have not installed"
+                   "\nthe MozRepl add-on to Firefox or that you have not"
+                   "\nstarted it.  You start it from the menus in Firefox:"
+                   "\n\n     Tools / MozRepl / Start"
+                   "\n"
+                   "\nSee ")
+           (insert-text-button
+            "MozRepl home page"
+            'action (lambda (button)
+                      (browse-url
+                       "http://hyperstruct.net/projects/mozrepl")
+                      )
+            'face 'button)
+           (insert
+            " for more information."
+            "\n"
+            "\nMozRepl is also available directly from Firefox add-on"
+            "\npages, but is updated less frequently there.")
+           ))
+       (error "Can't start MozRepl"))))
+
+(defun moz-ordinary-insertion-filter (proc string)
+  "simple filter for command execution"
+  (with-current-buffer (process-buffer proc)
+    (let (moving)
+      (process-put proc 'busy (not (string-match "\\(\\w+\\)> \\'" string)))
+      (setq moving (= (point) (process-mark proc)))
+      (save-excursion
+        ;; Insert the text, moving the process-marker.
+        (goto-char (process-mark proc))
+        (insert string)
+        (set-marker (process-mark proc) (point)))
+      (if moving (goto-char (process-mark proc))))
+    ))
+
+(defvar moz-verbose nil
+  "If t print informative statements.")
+
 (defun moz-command (com &optional buf)
   "Send the moz-repl  process command COM and delete the output
 from the MozRepl process buffer.  If an optional second argument BUF
@@ -404,7 +501,7 @@ output is inserted in that buffer. BUF is erased before use.
   (if buf
       (setq buf (get-buffer-create buf))
     (setq buf (get-buffer-create "*moz-command-output*")))
-  (let ((proc (inferior-moz-process)))
+  (let ((proc (zotexo--moz-process)))
     (save-excursion
       ;; (set-buffer sbuffer)
       (when (process-get proc 'busy)
@@ -429,7 +526,8 @@ output is inserted in that buffer. BUF is erased before use.
               (moz-wait-for-process proc)
               (delete-region (point-at-bol) (point-max))
               )
-            (message "Moz-command finished")
+            (if moz-verbose
+                (message "Moz-command finished"))
             )
         ;; Restore old values for process filter
         (set-process-buffer proc oldpb)
@@ -464,32 +562,18 @@ output is inserted in that buffer. BUF is erased before use.
       )))
 
 
-(defun moz-ordinary-insertion-filter (proc string)
-  "simple filter for command execution"
-  ;; (with-current-buffer (process-buffer proc)
-  (let (moving)
-    (process-put proc 'busy (not (string-match "\\(\\w+\\)> \\'" string)))
-    (setq moving (= (point) (process-mark proc)))
-    (save-excursion
-      ;; Insert the text, moving the process-marker.
-      (goto-char (process-mark proc))
-      (insert string)
-      (set-marker (process-mark proc) (point)))
-    (if moving (goto-char (process-mark proc))))
-  )
+;; (defun inferior-moz-track-proc-busy (comint-output)
+;;   "track if process returned the '>' prompt and mark it as busy if not."
+;;   (if (string-match "\\(\\w+\\)> \\'" comint-output)
+;;       (process-put (get-buffer-process (current-buffer)) 'busy nil)
+;;     (process-put (get-buffer-process (current-buffer)) 'busy t)))
 
-(defun inferior-moz-track-proc-busy (comint-output)
-  "track if process returned the '>' prompt and mark it as busy if not."
-  (if (string-match "\\(\\w+\\)> \\'" comint-output)
-      (process-put (get-buffer-process (current-buffer)) 'busy nil)
-    (process-put (get-buffer-process (current-buffer)) 'busy t)))
+;; (defun zotexo-insert-busy-hook ()
+;;   "Add `inferior-moz-track-proc-busy' to comint-outbut-filter hook "
+;;   (add-hook 'comint-output-filter-functions 'inferior-moz-track-proc-busy nil t)
+;;   )
 
-(defun zotexo-insert-busy-hook ()
-  "Add `inferior-moz-track-proc-busy' to comint-outbut-filter hook "
-  (add-hook 'comint-output-filter-functions 'inferior-moz-track-proc-busy nil t)
-  )
-
-(add-hook 'inferior-moz-hook 'zotexo-insert-busy-hook)
+;; (add-hook 'inferior-moz-hook 'zotexo-insert-busy-hook)
 
 (provide 'zotexo)
 ;;; zotexo.el ends here.
