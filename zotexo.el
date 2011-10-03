@@ -491,4 +491,5 @@ output is inserted in that buffer. BUF is erased before use.
 
 (add-hook 'inferior-moz-hook 'zotexo-insert-busy-hook)
 
+(provide 'zotexo)
 ;;; zotexo.el ends here.
