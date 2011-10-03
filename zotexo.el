@@ -5,7 +5,7 @@
 ;; Maintainer: Spinu Vitalie
 ;; Copyright (C) 2011, Spinu Vitalie, all rights reserved.
 ;; Created: Oct 2 2011
-;; Version: 0.1
+;; Version: 0.2
 ;; URL: http://code.google.com/p/zotexo/
 ;; Keywords: zotero, emacs, reftex, bibtex, MozRepl
 ;;
@@ -57,6 +57,70 @@
 
 (defvar zotexo-check-interval 2 
   "Seconds between checks for zotero database changes.")
+
+(defvar zotexo-use-ido t
+  "If t will try to use ido interface")
+
+(defvar zotexo-auto-update-all nil
+  "If t zotexo checks for the change in zotero database
+every `zotexo-check-interval' seconds and auto updates all
+buffers with active `zotexo-minor-mode'.
+
+If nil the only updated files are those with non-nil file local
+variable `zotexo-auto-update'. See
+`zotexo-mark-for-auto-update'. ")
+
+(defvar zotexo--render-collection-js
+  "var render_collection = function(coll, prefix) {
+    if (!coll) {
+        coll = null;
+    };
+    if (!prefix){
+        prefix='';
+    };
+    var collections = zotero.getCollections(coll);
+    for (c in collections) {
+        full_name = prefix + '/' + collections[c].name;
+        repl.print(collections[c].id + ' ' + full_name);
+        if (collections[c].hasChildCollections) {
+	    var name = render_collection(collections[c].id, full_name);
+        };
+    };
+};
+"
+  )
+
+
+(defvar zotexo--export-collection-js
+  "
+
+var filename=('%s');
+var prefs = Components.classes['@mozilla.org/preferences-service;1'].getService(Components.interfaces.nsIPrefService).getBranch('extensions.zotero.');
+var recColl = prefs.getBoolPref('recursiveCollections');
+prefs.setBoolPref('recursiveCollections', true);
+var file = Components.classes['@mozilla.org/file/local;1'].createInstance(Components.interfaces.nsILocalFile);
+file.initWithPath(filename);
+var zotero = Components.classes['@zotero.org/Zotero;1'].getService(Components.interfaces.nsISupports).wrappedJSObject;
+var collection = true;
+var id = %s;
+if (%s){
+    var translator = new zotero.Translate('export');
+    collection = zotero.Collections.get(id);
+    translator.setCollection(collection);
+};
+if(collection){
+    translator.setLocation(file);
+    translator.setTranslator('9cb70025-a888-4a29-a210-93ec52da40d4');
+    translator.translate();
+    repl.print(':MozOK:')
+}else{
+    repl.print('Collection with the id ' + id + ' does not exist.');
+};
+prefs.setBoolPref('recursiveCollections', recColl);
+"
+
+  "Command is sent to zotero."
+  )
 
 (define-minor-mode zotexo-minor-mode
   "zotexo minor mode for interaction with Firefox.
@@ -185,70 +249,6 @@ repl.print(zotero.getZoteroDatabase().path);")
     ;; (print (list (decode-time lt) (decode-time lt-journal) (decode-time lt.tmp)))
     (car (last (sort* (delq nil (list lt lt-journal lt.tmp)) 'time-less-p)))
     ))
-
-(defvar zotexo-use-ido t
-  "If t will try to use ido interface")
-
-(defvar zotexo-auto-update-all nil
-  "If t zotexo checks for the change in zotero database
-every `zotexo-check-interval' seconds and auto updates all
-buffers with active `zotexo-minor-mode'.
-
-If nil the only updated files are those with non-nil file local
-variable `zotexo-auto-update'. See
-`zotexo-mark-for-auto-update'. ")
-
-(defvar zotexo--render-collection-js
-   "var render_collection = function(coll, prefix) {
-    if (!coll) {
-        coll = null;
-    };
-    if (!prefix){
-        prefix='';
-    };
-    var collections = zotero.getCollections(coll);
-    for (c in collections) {
-        full_name = prefix + '/' + collections[c].name;
-        repl.print(collections[c].id + ' ' + full_name);
-        if (collections[c].hasChildCollections) {
-	    var name = render_collection(collections[c].id, full_name);
-        };
-    };
-};
-"
-)
-
-
-(defvar zotexo--export-collection-js
-  "
-
-var filename=('%s');
-var prefs = Components.classes['@mozilla.org/preferences-service;1'].getService(Components.interfaces.nsIPrefService).getBranch('extensions.zotero.');
-var recColl = prefs.getBoolPref('recursiveCollections');
-prefs.setBoolPref('recursiveCollections', true);
-var file = Components.classes['@mozilla.org/file/local;1'].createInstance(Components.interfaces.nsILocalFile);
-file.initWithPath(filename);
-var zotero = Components.classes['@zotero.org/Zotero;1'].getService(Components.interfaces.nsISupports).wrappedJSObject;
-var collection = true;
-var id = %s;
-if (%s){
-    var translator = new zotero.Translate('export');
-    collection = zotero.Collections.get(id);
-    translator.setCollection(collection);
-};
-if(collection){
-    translator.setLocation(file);
-    translator.setTranslator('9cb70025-a888-4a29-a210-93ec52da40d4');
-    translator.translate();
-    repl.print(':MozOK:')
-}else{
-    repl.print('Collection with the id ' + id + ' does not exist.');
-};
-prefs.setBoolPref('recursiveCollections', recColl);
-"
-
-"Command is sent to zotero."
-)
 
 (defun zotexo-update-database(&optional last-change)
   "Prompt for collection if not found, but return nil in
@@ -449,9 +449,10 @@ Note that you have to start the MozRepl server from Firefox."
           (with-current-buffer zotexo--moz-buffer
             (set-marker (process-mark proc) (point-max)))
           (set-process-filter proc 'moz-ordinary-insertion-filter)))
-      (file-error
-       (with-output-to-temp-buffer "*MozRepl Error*"
-         (with-current-buffer (get-buffer "*MozRepl Error*")
+      (file-error 
+       (let ((buf (get-buffer-create "*MozRepl Error*")))
+         (with-current-buffer buf
+           (erase-buffer)
            (insert "Can't start MozRepl, the error message was:\n\n     "
                    (error-message-string err)
                    "\n"
@@ -473,8 +474,11 @@ Note that you have to start the MozRepl server from Firefox."
             "\n"
             "\nMozRepl is also available directly from Firefox add-on"
             "\npages, but is updated less frequently there.")
-           ))
-       )))
+           )
+         (kill-buffer "*ZotexoMozRepl*")
+         (pop-to-buffer buf)
+         ))
+       ))
 
 (defun moz-ordinary-insertion-filter (proc string)
   "simple filter for command execution"
