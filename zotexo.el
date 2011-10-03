@@ -50,6 +50,7 @@
     (define-key map "\C-czs" 'zotexo-set-collection)
     (define-key map "\C-czc" 'zotexo-set-collection)
     (define-key map "\C-czm" 'zotexo-mark-for-auto-update)
+    (define-key map "\C-czz" 'zotexo-reset)
     map))
 
 (defvar zotexo--check-timer nil
@@ -69,6 +70,19 @@ buffers with active `zotexo-minor-mode'.
 If nil the only updated files are those with non-nil file local
 variable `zotexo-auto-update'. See
 `zotexo-mark-for-auto-update'. ")
+
+
+(defvar zotexo-zotero-database-location nil
+  "Location of zotero sql database.
+It is detected automatically. Usually you would not need
+to set it manually.")
+
+(defvar zotexo--get-zotero-database-js
+  "var zotero = Components.classes['@zotero.org/Zotero;1'].getService(Components.interfaces.nsISupports).wrappedJSObject;
+repl.print(zotero.getZoteroDatabase().path);")
+
+(defvar zotexo--zotero-database-last-change nil
+  "Internal, used to track zotero changes.")
 
 (defvar zotexo--render-collection-js
   "var render_collection = function(coll, prefix) {
@@ -204,18 +218,6 @@ The following keys are bound in this minor mode:
         (message nil)
         )
     )))
-
-(defvar zotexo-zotero-database-location nil
-  "Location of zotero sql database.
-It is detected automatically. Usually you would not need
-to set it manually.")
-
-(defvar zotexo--get-zotero-database-js
-  "var zotero = Components.classes['@zotero.org/Zotero;1'].getService(Components.interfaces.nsISupports).wrappedJSObject;
-repl.print(zotero.getZoteroDatabase().path);")
-
-(defvar zotexo--zotero-database-last-change nil
-  "Internal, used to track zotero changes.")
 
 (defun zotexo--get-zotero-change-time-if-changed ()
   "Return the time of zotero last change if changed or nil otherwise."
@@ -382,6 +384,7 @@ If not-update is t, don't update after setting the collecton.
   )
 
 
+
 (defun zotexo-mark-for-auto-update (&optional unmark)
   "Mark current file for auto-update.
 
@@ -408,6 +411,14 @@ the end of the file.
     )
   )
 
+
+(defun zotexo-reset ()
+  "Reset zotexo."
+  (interactive)
+  (setq zotexo--zotero-database-last-change nil) ;; reset the change tracker 
+  (delete-process (zotexo--moz-process))
+  (kill-buffer zotexo--moz-buffer)
+)
 
 (defun zotexo--get-local-collection-id ()
    (cdr (assoc 'zotero-collection file-local-variables-alist)))
