@@ -32,10 +32,8 @@
 ;; reftex
 ;;
 ;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-
 ;;;; Commentary:
 ;; See http://code.google.com/p/zotexo/ and `zotexo-minor-mode' for more info.
-
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;
 ;;;; Change log:
@@ -50,7 +48,8 @@
     (define-key map "\C-czs" 'zotexo-set-collection)
     (define-key map "\C-czc" 'zotexo-set-collection)
     (define-key map "\C-czm" 'zotexo-mark-for-auto-update)
-    (define-key map "\C-czz" 'zotexo-reset)
+    (define-key map "\C-czr" 'zotexo-reset)
+    (define-key map "\C-czt" 'zotexo-toggle-auto-update)
     map))
 
 (defvar zotexo--check-timer nil
@@ -83,6 +82,12 @@ repl.print(zotero.getZoteroDatabase().path);")
 
 (defvar zotexo--zotero-database-last-change nil
   "Internal, used to track zotero changes.")
+
+(defvar zotexo--auto-update-is-on nil
+  "If t zotexo monitors changes in zotero database and reexports
+  collections if needed.
+  You can toggle it with  'C-c z t'
+")
 
 (defvar zotexo--render-collection-js
   "var render_collection = function(coll, prefix) {
@@ -136,6 +141,8 @@ prefs.setBoolPref('recursiveCollections', recColl);
   "Command is sent to zotero."
   )
 
+
+
 (define-minor-mode zotexo-minor-mode
   "zotexo minor mode for interaction with Firefox.
 With no argument, this command toggles the mode.
@@ -158,7 +165,7 @@ The following keys are bound in this minor mode:
 
 \\{zotexo-minor-mode-map}"
   nil
-  " Zx"
+  (zotexo--auto-update-is-on " ZX" " zx")
   :keymap zotexo-minor-mode-map
   :group 'zotexo
   (if zotexo-minor-mode
@@ -187,37 +194,38 @@ The following keys are bound in this minor mode:
 
 (defun zotexo--check-and-update-all ()
   "Function run with `zotexo--check-timer'."
-  (let ((last-change (zotexo--get-zotero-change-time-if-changed))
-        out id)
-    (when last-change ;; if nil no change have been made and no new zotexo-minor-mode trigers 
-      (message "Zotexo checking for updates ... ")
-      (setq zotexo--zotero-database-last-change last-change)
-      (dolist (b  (buffer-list))
-        ;; (message "got1 %s" (buffer-name b))
-        (when (and ;; minor-mode active?, collection is set?, auto-update-all?, auto-update?
-               (buffer-local-value 'zotexo-minor-mode b)
-               (assoc 'zotero-collection (buffer-local-value 'file-local-variables-alist b))
-               (let ((auto-update
-                      (assoc 'zotexo-auto-update (buffer-local-value 'file-local-variables-alist b))))
-                 (if (and zotexo-auto-update-all (null auto-update))
-                     (setq auto-update '(t . t)))
-                 (cdr auto-update))
-               )
-          (with-current-buffer b
-            (ignore-errors
-              (setq id (zotexo-update-database last-change))))
-          (when id
-            (setq out
-                  (append (list (format "%s[%s]" (buffer-name b) id)) out)))
+  (when zotexo--auto-update-is-on 
+    (let ((last-change (zotexo--get-zotero-change-time-if-changed))
+          out id)
+      (when last-change ;; if nil no change have been made and no new zotexo-minor-mode trigers 
+        (message "Zotexo checking for updates ... ")
+        (setq zotexo--zotero-database-last-change last-change)
+        (dolist (b  (buffer-list))
+          ;; (message "got1 %s" (buffer-name b))
+          (when (and ;; minor-mode active?, collection is set?, auto-update-all?, auto-update?
+                 (buffer-local-value 'zotexo-minor-mode b)
+                 (assoc 'zotero-collection (buffer-local-value 'file-local-variables-alist b))
+                 (let ((auto-update
+                        (assoc 'zotexo-auto-update (buffer-local-value 'file-local-variables-alist b))))
+                   (if (and zotexo-auto-update-all (null auto-update))
+                       (setq auto-update '(t . t)))
+                   (cdr auto-update))
+                 )
+            (with-current-buffer b
+              (ignore-errors
+                (setq id (zotexo-update-database last-change))))
+            (when id
+              (setq out
+                    (append (list (format "%s[%s]" (buffer-name b) id)) out)))
+            )
+          ;; (message "got2")
           )
-        ;; (message "got2")
-        )
-      (if (> (length out) 0)
-          (message "Zotexo updated %s files : %s." (length out) out)
-        (message "No files needed to be updated.")
-        (message nil)
-        )
-    )))
+        (if (> (length out) 0)
+            (message "Zotexo updated %s files : %s." (length out) out)
+          (message "No files needed to be updated.")
+          (message nil)
+          )
+        ))))
 
 (defun zotexo--get-zotero-change-time-if-changed ()
   "Return the time of zotero last change if changed or nil otherwise."
@@ -419,6 +427,16 @@ the end of the file.
   (delete-process (zotexo--moz-process))
   (kill-buffer zotexo--moz-buffer)
 )
+
+
+(defun zotexo-toggle-auto-update ()
+  "Togles auto-updating in all buffers.
+Note that once toggled in your firefox and MozRepl must be
+started, otherwise you will start getting error screens. "
+  (interactive)
+  (setq zotexo--auto-update-is-on (not zotexo--auto-update-is-on))
+  )
+
 
 (defun zotexo--get-local-collection-id ()
    (cdr (assoc 'zotero-collection file-local-variables-alist)))
