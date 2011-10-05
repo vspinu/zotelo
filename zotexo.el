@@ -504,6 +504,7 @@ started, otherwise you will start getting error screens. "
 (defvar zotexo--moz-port 4242)
 (defvar zotexo--moz-buffer nil)
 (defvar zotexo--startup-error-count 0)
+(defvar zotexo--max-errors 10)
 
 (defun zotexo--moz-process ()
   "Return inferior MozRepl process.  Start it if necessary."
@@ -518,15 +519,14 @@ started, otherwise you will start getting error screens. "
 Note that you have to start the MozRepl server from Firefox."
   (interactive)
   (condition-case err
-      (progn
-        (let (proc)
-          (setq zotexo--moz-buffer (get-buffer-create "*ZotexoMozRepl*"))
-          (setq proc (open-network-stream "ZotexoMozRepl" zotexo--moz-buffer
-                                          zotexo--moz-host zotexo--moz-port))
-          (sleep-for 0 100)
-          (with-current-buffer zotexo--moz-buffer
-            (set-marker (process-mark proc) (point-max)))
-          (set-process-filter proc 'moz-ordinary-insertion-filter))
+      (let (proc)
+        (setq zotexo--moz-buffer (get-buffer-create "*ZotexoMozRepl*"))
+        (setq proc (open-network-stream "ZotexoMozRepl" zotexo--moz-buffer
+                                        zotexo--moz-host zotexo--moz-port))
+        (sleep-for 0 100)
+        (with-current-buffer zotexo--moz-buffer
+          (set-marker (process-mark proc) (point-max)))
+        (set-process-filter proc 'moz-ordinary-insertion-filter)
         (setq zotexo--startup-error-count 0))
     (file-error 
      (let ((buf (get-buffer-create "*MozRepl Error*")))
@@ -558,12 +558,14 @@ Note that you have to start the MozRepl server from Firefox."
                   zotexo--startup-error-count
                   (if (not (and (>= zotexo--startup-error-count 10)
                                 zotexo--auto-update-is-on))
-                      ""
+                      "Use [C-c z t] to switch zotexo auto-update off."
                     (setq zotexo--auto-update-is-on nil)
-                    "Too many errors: zotexo auto-update was turned off!\n Use [C-c z t] to switch it on.")))
+                    (setq zotexo--startup-error-count 0)
+                    "Too many errors. Zotexo auto-update was turned off!\nUse [C-c z t] to switch it on.")))
          )
        (kill-buffer "*ZotexoMozRepl*")
-       (pop-to-buffer buf)
+       (display-buffer buf t)
+       (error "Zotexo cannot start MozRepl")
        ))
     ))
 
