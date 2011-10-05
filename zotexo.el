@@ -236,7 +236,7 @@ The following keys are bound in this minor mode:
               (setq id (zotexo-update-database t ))))
           (when id
             (setq out
-                  (append (list (buffer-name b) out)))
+                  (append (list (buffer-name b)) out))
           )))
       (if (> (length out) 0)
           (message "Bibliography updated in %s files: %s." (length out) out))
