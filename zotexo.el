@@ -70,14 +70,6 @@ If nil the only updated files are those with non-nil file local
 variable `zotexo-auto-update'. See
 `zotexo-mark-for-auto-update'. ")
 
-
-;; (defvar zotexo-zotero-database-location nil
-;;   "Location of zotero sql database.
-;; It is detected automatically. Usually you would not need
-;; to set it manually.")
-
-;; (defvar zotexo-zotero-storage-location nil)
-
 (defvar zotexo--get-zotero-database-js
   "var zotero = Components.classes['@zotero.org/Zotero;1'].getService(Components.interfaces.nsISupports).wrappedJSObject;
 zotero.getZoteroDatabase().path;")
@@ -85,9 +77,6 @@ zotero.getZoteroDatabase().path;")
 (defvar zotexo--get-zotero-storage-js
   "var zotero = Components.classes['@zotero.org/Zotero;1'].getService(Components.interfaces.nsISupports).wrappedJSObject;
 zotero.getStorageDirectory().path;")
-
-;; (defvar zotexo--zotero-database-last-change nil
-;;   "Internal, used to track zotero changes.")
 
 (defvar zotexo--auto-update-is-on nil
   "If t zotexo monitors changes in zotero database and reexports
@@ -261,48 +250,6 @@ The following keys are bound in this minor mode:
         )
       )))
 
-;; (defun zotexo--get-zotero-change-time-if-changed ()
-;;   "Return the time of zotero last change if changed or nil otherwise."
-
-;;   (let ((zdb-last-mod (zotexo--get-zotero-last-change-time)))
-;;     (if zotexo--zotero-database-last-change ;; is set to nil each time new .tex buffer is opened. 
-;;         (when (time-less-p zotexo--zotero-database-last-change zdb-last-mod)
-;;           zdb-last-mod) ;; return nil otherwise
-;;       zdb-last-mod))
-;;   )
-
-;; (defun zotexo--get-zotero-db-location ()
-;;   (with-current-buffer (moz-command zotexo--get-zotero-database-js)
-;;     (let ((file (buffer-substring-no-properties (point-min) (max (1- (point-max)) 0))))
-;;       (if (file-exists-p file)
-;;           file
-;;         (error "MozRepl didn't return a valid database location. \nPlease try again or set it manually. \n %s" file) )
-;;       )))
-
-;; (defun zotexo--get-zotero-storage-location ()
-;;   (with-current-buffer (moz-command zotexo--get-zotero-storage-js)
-;;     (let ((file (buffer-substring-no-properties (point-min) (max (1- (point-max)) 0))))
-;;       (if (file-exists-p file)
-;;           file
-;;         (error "MozRepl didn't return a valid storage location. \nPlease try again or set it manually. \n %s" file) )
-;;       )))
-
-;; (defun zotexo--get-zotero-last-change-time ()
-;;   (unless zotexo-zotero-database-location
-;;     (setq zotexo-zotero-database-location (zotexo--get-zotero-db-location)))
-;;   (unless zotexo-zotero-storage-location
-;;     (setq zotexo-zotero-storage-location (zotexo--get-zotero-storage-location)))
-;;   (let* ((zsql zotexo-zotero-database-location)
-;;          (lt (nth 5 (file-attributes zsql)))
-;;          (zsql-journal (concat zsql "-journal"))
-;;          (lt-journal (nth 5 (file-attributes zsql-journal)))
-;;          (zsql.tmp (concat zsql ".tmp"))
-;;          (lt.tmp (nth 5 (file-attributes zsql.tmp)))
-;;          (lt.storage (nth 5 (file-attributes zotexo-zotero-storage-location))))
-;;     ;; (print (list (decode-time lt) (decode-time lt-journal) (decode-time lt.tmp)))
-;;     (car (last (sort* (delq nil (list lt lt-journal lt.tmp)) 'time-less-p)))
-;;     ))
-
 (defun zotexo-update-database (&optional check-zotero-change)
   "Prompt for collection if not found, but return nil in
 non-interactive mode. Error if bibfile is not found. Error if
@@ -436,7 +383,7 @@ If not-update is t, don't update after setting the collecton.
       (when reset-ido
         (remove-hook 'minibuffer-setup-hook 'ido-minibuffer-setup)
         (remove-hook 'choose-completion-string-functions 'ido-choose-completion-string)
-        (removeq-hook 'kill-emacs-hook 'ido-kill-emacs-hook)
+        (remove-hook 'kill-emacs-hook 'ido-kill-emacs-hook)
         )
       ))
   )
@@ -647,7 +594,11 @@ output is inserted in that buffer. BUF is erased before use.
     (while (and (process-get proc 'busy)
                 (< elapsed timeout))
       (sleep-for (* .1 i)) ; if passed to accept-process-output
-                                        ; does not work in emacs 23.2.1, very elusive bug, most likely on long outputs accept-process-output returns before teh timeout if output is receive
+                                        ; does not work in emacs 23.2.1, very
+                                        ; elusive bug, most likely on long
+                                        ; outputs accept-process-output returns
+                                        ; before teh timeout if output is
+                                        ; receive
       (setq elapsed (* (/ (+ i 1) 2.0) .1 i))
       (setq i (1+ i))
       (accept-process-output proc 0)
