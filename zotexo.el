@@ -95,6 +95,7 @@ zotero.getStorageDirectory().path;")
 
 (defvar zotexo--render-collection-js
   "var render_collection = function(coll, prefix) {
+    var zotero = Components.classes['@zotero.org/Zotero;1'].getService(Components.interfaces.nsISupports).wrappedJSObject;
     if (!coll) {
         coll = null;
     };
