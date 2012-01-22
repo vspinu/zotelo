@@ -3,9 +3,9 @@
 ;; Filename: zotero.el
 ;; Author: Spinu Vitalie
 ;; Maintainer: Spinu Vitalie
-;; Copyright (C) 2011, Spinu Vitalie, all rights reserved.
+;; Copyright (C) 2011-2011, Spinu Vitalie, all rights reserved.
 ;; Created: Oct 2 2011
-;; Version: 0.2
+;; Version: 0.3
 ;; URL: http://code.google.com/p/zotexo/
 ;; Keywords: zotero, emacs, reftex, bibtex, MozRepl
 ;;
@@ -88,6 +88,7 @@ zotero.getStorageDirectory().path;")
 
 
 (defvar zotexo--verbose nil)
+
 (defun zotexo--message (str)
   (when zotexo--verbose
     (with-current-buffer "*Messages*"
@@ -105,7 +106,7 @@ zotero.getStorageDirectory().path;")
     var collections = zotero.getCollections(coll);
     for (c in collections) {
         full_name = prefix + '/' + collections[c].name;
-        repl.print(collections[c].id + ' ' + full_name);
+        %s.print(collections[c].id + ' ' + full_name);
         if (collections[c].hasChildCollections) {
 	    var name = render_collection(collections[c].id, full_name);
         };
@@ -117,7 +118,6 @@ zotero.getStorageDirectory().path;")
 
 (defvar zotexo--export-collection-js
   "
-
 var filename=('%s');
 var prefs = Components.classes['@mozilla.org/preferences-service;1'].getService(Components.interfaces.nsIPrefService).getBranch('extensions.zotero.');
 var recColl = prefs.getBoolPref('recursiveCollections');
@@ -127,13 +127,12 @@ file.initWithPath(filename);
 var zotero = Components.classes['@zotero.org/Zotero;1'].getService(Components.interfaces.nsISupports).wrappedJSObject;
 var collection = true;
 var id = %s;
-if (%s){
-    var translator = new zotero.Translate('export');
+var translator = new zotero.Translate('export');
+if (%s){ //all collections
     collection = zotero.Collections.get(id);
     translator.setCollection(collection);
 };
 if(collection){
-    var translator = new zotero.Translate('export');
     translator.setLocation(file);
     translator.setTranslator('9cb70025-a888-4a29-a210-93ec52da40d4');
     translator.translate();
@@ -144,21 +143,21 @@ if(collection){
 prefs.setBoolPref('recursiveCollections', recColl);
 out;
 "
-
-  "Command is sent to zotero."
+  "Command to be sent to zotero request export."
   )
 
 (defvar zotexo--dateModified-js 
   "
 var zotero = Components.classes['@zotero.org/Zotero;1'].getService(Components.interfaces.nsISupports).wrappedJSObject;
-                                var id = %s;
-                                var collection = zotero.Collections.get(id);
-                                if(collection){
-                                ':MozOK:' + collection.dateModified;
-                                }else{
-                                'Collection with the id ' + id + ' does not exist.';
-                                };"
-  )
+var id = %s;
+var collection = zotero.Collections.get(id);
+if(collection){
+   ':MozOK:' + collection.dateModified;
+}else{
+   'Collection with the id ' + id + ' does not exist.';
+};"
+
+  "Command to get last modification date of the collection.")
 
 (define-minor-mode zotexo-minor-mode
   "zotexo minor mode for interaction with Firefox.
@@ -213,7 +212,7 @@ The following keys are bound in this minor mode:
   (when zotexo--auto-update-is-on 
     (let ( out id any-z-buffer-p z-buffer-p) 
       (zotexo--message  "Zotexo checking for updates ...")
-      (dolist (b  (buffer-list))
+      (dolist (b  (buffer-list)) ;iterate through zotexo buffers
         (setq z-buffer-p (buffer-local-value 'zotexo-minor-mode b))
         (when z-buffer-p
           (setq any-z-buffer-p t))
@@ -241,7 +240,7 @@ The following keys are bound in this minor mode:
                   (append (list (buffer-name b)) out))
           )))
       (if (> (length out) 0)
-          (message "Bibliography updated in %s files: %s." (length out) out))
+          (message "Bibliography updated in %s buffers: %s." (length out) out))
       (when (and (not any-z-buffer-p)
                  (timerp zotexo--check-timer))
         ;; stop timer if no more zotexo buffers
@@ -253,9 +252,12 @@ The following keys are bound in this minor mode:
       )))
 
 (defun zotexo-update-database (&optional check-zotero-change)
-  "Prompt for collection if not found, but return nil in
-non-interactive mode. Error if bibfile is not found. Error if
-collection is not found by MozRepl. "
+  "Update zotero database for the current buffer.
+
+If called interactively, ask for collection if not defined in the
+current buffer.  If non-interactive and file not found create 'fileName_zotexo_.bib' file.
+
+Error if zotero collection is not found by MozRepl"
   (interactive "P")
   (let ((bibfile (car (zotexo--locate-bibliography-files default-directory)))
         (proc  (zotexo--moz-process))
@@ -283,11 +285,10 @@ collection is not found by MozRepl. "
                    (null bib-last-change)
                    (time-less-p bib-last-change zotero-last-change)))
       (setq all-colls-p
-            (if (equal id "0")
-                "false"
-              "true"))
+            (if (equal id "0") "false" "true"))
+      (message "%s:%s" id all-colls-p)
       (setq cstr (format zotexo--export-collection-js bibfile id all-colls-p))
-      ;; (print cstr)
+      (print cstr)
       (message "Updating '%s' ..." (file-name-nondirectory bibfile))
       (with-current-buffer (moz-command cstr)
         (goto-char (point-min))
@@ -356,7 +357,8 @@ If not-update is t, don't update after setting the collecton.
     (unwind-protect
         (progn
           ;; set up the collection list
-          (moz-command zotexo--render-collection-js)
+          (moz-command (format zotexo--render-collection-js
+			       (process-get (zotexo--moz-process) 'moz-prompt)))
           (moz-command "render_collection()" buf)
           (with-current-buffer buf
             (goto-char (point-min))
@@ -369,7 +371,7 @@ If not-update is t, don't update after setting the collecton.
                              colls))))
             )
           (if (null colls)
-              (message "No collections found")
+              (message "No collections found or error occured see *moz-command-output* buffer for clues.")
             ;; (setq colls (mapcar 'remove-text-properties colls))
             (setq name (zotexo--read (nreverse colls) prompt))
             (save-excursion
@@ -507,7 +509,7 @@ Note that you have to start the MozRepl server from Firefox."
                   zotexo--startup-error-count
                   (if (not (and (>= zotexo--startup-error-count 10)
                                 zotexo--auto-update-is-on))
-                      "Use [C-c z t] to switch zotexo auto-update off."
+                      "If zotexo auto-update is on, press \"C-c z t\" to turn it off."
                     (setq zotexo--auto-update-is-on nil)
                     (setq zotexo--startup-error-count 0)
                     "Too many errors. Zotexo auto-update was turned off!\nUse [C-c z t] to switch it on.")))
@@ -521,8 +523,11 @@ Note that you have to start the MozRepl server from Firefox."
 (defun moz-ordinary-insertion-filter (proc string)
   "simple filter for command execution"
   (with-current-buffer (process-buffer proc)
-    (let (moving)
-      (process-put proc 'busy (not (string-match "\\(\\w+\\)> \\'" string)))
+    (let ((ready (string-match "\\(\\w+\\)> \\'" string))
+	  moving)
+      (when ready
+	(process-put proc 'moz-prompt (match-string-no-properties 1 string)))
+      (process-put proc 'busy (not ready))
       (setq moving (= (point) (process-mark proc)))
       (save-excursion
         ;; Insert the text, moving the process-marker.
@@ -548,7 +553,7 @@ output is inserted in that buffer. BUF is erased before use.
     (save-excursion
       ;; (set-buffer sbuffer)
       (when (process-get proc 'busy)
-        (process-send-string proc ";\n") ;; clean up unfinished commands or something
+        (process-send-string proc ";\n") ;; clean up unfinished 
         (sleep-for 0 100)
         (when (process-get proc 'busy)
           (error
@@ -557,59 +562,43 @@ output is inserted in that buffer. BUF is erased before use.
       (setq oldpb (process-buffer proc))
       (setq oldpm (marker-position (process-mark proc)))
       ;; need the buffer-local values in result buffer "buf":
-      ;; (unwind-protect
-      (progn
-        (set-process-buffer proc buf)
-        (set-process-filter proc 'moz-ordinary-insertion-filter)
-        ;; Output is now going to BUF:
-        (save-excursion
-          (set-buffer buf)
-          (erase-buffer)
-          (set-marker (process-mark proc) (point-min))
-          (process-put proc 'busy t)
-          (process-send-string proc (concat com "\n"))
-          (sleep-for 0.020); 0.1 is noticeable!
-          (moz-wait-for-process proc)
-          (delete-region (point-at-bol) (point-max))
-          )
-        (if moz-verbose
-            (message "Moz-command finished"))
-        )
-      ;; Restore old values for process filter
-      (set-process-buffer proc oldpb)
-      (set-process-filter proc oldpf)
-      (set-marker (process-mark proc) oldpm oldpb) ;; need oldpb here!!! otherwise it is not set for some reason
-                                        ;)
-      )
-    )
-  buf
-  )
+      (unwind-protect
+	  (progn
+	    (set-process-buffer proc buf)
+	    (set-process-filter proc 'moz-ordinary-insertion-filter)
+	    ;; Output is now going to BUF:
+	    (save-excursion
+	      (set-buffer buf)
+	      (erase-buffer)
+	      (set-marker (process-mark proc) (point-min))
+	      (process-put proc 'busy t)
+	      (process-send-string proc (concat com "\n"))
+	      (moz-wait-for-process proc)
+	      ;;(delete-region (point-at-bol) (point-max))
+	      )
+	    (if moz-verbose
+		(message "Moz-command finished")))
+	;; Restore old values for process filter
+	(set-process-buffer proc oldpb)
+	(set-process-filter proc oldpf)
+	(set-marker (process-mark proc) oldpm oldpb) ;; need oldpb here!!! otherwise it is not set for some reason
+	)
+      ))
+  buf)
 
-(defun moz-wait-for-process (proc &optional sleep force-redisplay timeout)
-  "Wait for TIMEOUT seconds the 'busy property of the process to become nil."
-  (if sleep (sleep-for sleep)); we sleep here, *and* wait below
-  (unless timeout
-    (setq timeout 30))
-  (let ((i 1)
-        (elapsed 0.0))
-    (accept-process-output proc 0.01) ;; enought for most of the short commands on my machine
-    (while (and (process-get proc 'busy)
-                (< elapsed timeout))
-      (sleep-for (* .1 i)) ; if passed to accept-process-output
-                                        ; does not work in emacs 23.2.1, very
-                                        ; elusive bug, most likely on long
-                                        ; outputs accept-process-output returns
-                                        ; before teh timeout if output is
-                                        ; receive
-      (setq elapsed (* (/ (+ i 1) 2.0) .1 i))
-      (setq i (1+ i))
-      (accept-process-output proc 0)
-      (if force-redisplay (redisplay t))
-      (when (>= elapsed timeout)
-        (message "Waited for %s seconds. Process is bussy or waits for the user's input." elapsed)
-        ;; (process-put proc 'ready t) ;; unlikely to end here; :tothink
-        )
-      )))
+
+(defun moz-wait-for-process (proc &optional wait)
+  "Wait for 'busy property of the process to become nil.
+If SEC-PROMPT is non-nil return if secondary prompt is detected
+regardless of whether primary prompt was detected or not.  If
+WAIT is non-nil wait for WAIT seconds for process output before
+the prompt check, default 0.01s. "
+  ;; (unless (eq (process-status proc) 'run)
+  ;;   (error "MozRepl process has died unexpectedly."))
+  (setq wait (or wait 0.01)) 
+  (save-excursion
+    (while (or (accept-process-output proc wait)
+	       (process-get proc 'busy)))))
 
 
 ;; (defun inferior-moz-track-proc-busy (comint-output)
