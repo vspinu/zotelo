@@ -133,6 +133,7 @@ if (%s){
     translator.setCollection(collection);
 };
 if(collection){
+    var translator = new zotero.Translate('export');
     translator.setLocation(file);
     translator.setTranslator('9cb70025-a888-4a29-a210-93ec52da40d4');
     translator.translate();
