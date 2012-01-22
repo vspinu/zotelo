@@ -96,6 +96,7 @@ zotero.getStorageDirectory().path;")
 
 (defvar zotexo--render-collection-js
   "var render_collection = function(coll, prefix) {
+    var R=%s;
     var zotero = Components.classes['@zotero.org/Zotero;1'].getService(Components.interfaces.nsISupports).wrappedJSObject;
     if (!coll) {
         coll = null;
@@ -106,7 +107,7 @@ zotero.getStorageDirectory().path;")
     var collections = zotero.getCollections(coll);
     for (c in collections) {
         full_name = prefix + '/' + collections[c].name;
-        %s.print(collections[c].id + ' ' + full_name);
+        R.print(collections[c].id + ' ' + full_name);
         if (collections[c].hasChildCollections) {
 	    var name = render_collection(collections[c].id, full_name);
         };
@@ -119,6 +120,7 @@ zotero.getStorageDirectory().path;")
 (defvar zotexo--export-collection-js
   "
 var filename=('%s');
+var id = %s;
 var prefs = Components.classes['@mozilla.org/preferences-service;1'].getService(Components.interfaces.nsIPrefService).getBranch('extensions.zotero.');
 var recColl = prefs.getBoolPref('recursiveCollections');
 prefs.setBoolPref('recursiveCollections', true);
@@ -126,9 +128,8 @@ var file = Components.classes['@mozilla.org/file/local;1'].createInstance(Compon
 file.initWithPath(filename);
 var zotero = Components.classes['@zotero.org/Zotero;1'].getService(Components.interfaces.nsISupports).wrappedJSObject;
 var collection = true;
-var id = %s;
 var translator = new zotero.Translate('export');
-if (%s){ //all collections
+if (id != 0){ //not all collections
     collection = zotero.Collections.get(id);
     translator.setCollection(collection);
 };
@@ -188,7 +189,7 @@ The following keys are bound in this minor mode:
       (progn
         (unless (timerp zotexo--check-timer)
           (setq zotexo--check-timer
-                (run-with-timer 5 zotexo-check-interval 'zotexo--check-and-update-all)))
+                (run-with-idle-timer 5 zotexo-check-interval 'zotexo--check-and-update-all)))
         )
     (unless 
         (loop for b in (buffer-list)
@@ -284,11 +285,8 @@ Error if zotero collection is not found by MozRepl"
                (or (null check-zotero-change)
                    (null bib-last-change)
                    (time-less-p bib-last-change zotero-last-change)))
-      (setq all-colls-p
-            (if (equal id "0") "false" "true"))
-      (message "%s:%s" id all-colls-p)
-      (setq cstr (format zotexo--export-collection-js bibfile id all-colls-p))
-      (print cstr)
+      (setq cstr (format zotexo--export-collection-js bibfile id))
+      ;; (print cstr)
       (message "Updating '%s' ..." (file-name-nondirectory bibfile))
       (with-current-buffer (moz-command cstr)
         (goto-char (point-min))
@@ -469,15 +467,14 @@ started, otherwise you will start getting error screens. "
   "Start mozrepl process and connect to Firefox.
 Note that you have to start the MozRepl server from Firefox."
   (interactive)
+  (setq zotexo--moz-buffer (get-buffer-create "*ZotexoMozRepl*"))
   (condition-case err
-      (let (proc)
-        (setq zotexo--moz-buffer (get-buffer-create "*ZotexoMozRepl*"))
-        (setq proc (open-network-stream "ZotexoMozRepl" zotexo--moz-buffer
-                                        zotexo--moz-host zotexo--moz-port))
+      (let ((proc (make-network-process :name "ZotexoMozRepl" :buffer zotexo--moz-buffer
+					:host zotexo--moz-host :service zotexo--moz-port
+					:filter 'moz-ordinary-insertion-filter)))
         (sleep-for 0 100)
         (with-current-buffer zotexo--moz-buffer
           (set-marker (process-mark proc) (point-max)))
-        (set-process-filter proc 'moz-ordinary-insertion-filter)
         (setq zotexo--startup-error-count 0))
     (file-error 
      (let ((buf (get-buffer-create "*MozRepl Error*")))
@@ -557,7 +554,7 @@ output is inserted in that buffer. BUF is erased before use.
         (sleep-for 0 100)
         (when (process-get proc 'busy)
           (error
-           "MozRepl process not ready. Finish your command before trying again.")))
+           "MozRepl process is not ready. Try latter or reset.")))
       (setq oldpf (process-filter proc))
       (setq oldpb (process-buffer proc))
       (setq oldpm (marker-position (process-mark proc)))
@@ -586,7 +583,7 @@ output is inserted in that buffer. BUF is erased before use.
       ))
   buf)
 
-
+ 
 (defun moz-wait-for-process (proc &optional wait)
   "Wait for 'busy property of the process to become nil.
 If SEC-PROMPT is non-nil return if secondary prompt is detected

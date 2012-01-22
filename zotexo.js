@@ -80,8 +80,11 @@ if (true){
     var translator = new zotero.Translate('export');
     collection = zotero.Collections.get(id);
     translator.setCollection(collection);
-};
+}; 
+
+
 if(collection){
+    
     translator.setLocation(file);
     translator.setTranslator('9cb70025-a888-4a29-a210-93ec52da40d4');
     translator.translate();
@@ -90,3 +93,6 @@ if(collection){
     'Collection with the id ' + id + ' does not exist.';
 };
 prefs.setBoolPref('recursiveCollections', recColl);
+
+
+2!=4;
