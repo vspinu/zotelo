@@ -88,11 +88,15 @@ zotero.getStorageDirectory().path;")
 
 
 (defvar zotexo--verbose nil)
+(defun zotexo-verbose ()
+  "Toggle zotexo debug messages (all printed in *message* buffer)"
+  (interactive)
+  (message "zotexo verbose '%s'" (setq zotexo--verbose (not zotexo--verbose))))
 
 (defun zotexo--message (str)
   (when zotexo--verbose
     (with-current-buffer "*Messages*"
-      (insert (format "[%s] %s\n" (current-time-string) str)))))
+      (insert (format "\n zotexo message on [%s]\n %s\n" (current-time-string) str)))))
 
 (defvar zotexo--render-collection-js
   "var render_collection = function(coll, prefix) {
@@ -147,7 +151,7 @@ out;
   "Command to be sent to zotero request export."
   )
 
-(defvar zotexo--dateModified-js 
+(defvar zotexo--dateModified-js
   "
 var zotero = Components.classes['@zotero.org/Zotero;1'].getService(Components.interfaces.nsISupports).wrappedJSObject;
 var id = %s;
@@ -191,12 +195,12 @@ The following keys are bound in this minor mode:
           (setq zotexo--check-timer
                 (run-with-idle-timer 5 zotexo-check-interval 'zotexo--check-and-update-all)))
         )
-    (unless 
+    (unless
         (loop for b in (buffer-list)
               for is-zotexo-mode = (buffer-local-value 'zotexo-minor-mode b)
               until is-zotexo-mode
               finally return is-zotexo-mode)
-      ;; if no more active zotexo mode, cancel the timer and kill the process 
+      ;; if no more active zotexo mode, cancel the timer and kill the process
       (when (timerp zotexo--check-timer)
         (cancel-timer zotexo--check-timer)
         (setq zotexo--check-timer nil)
@@ -210,8 +214,8 @@ The following keys are bound in this minor mode:
 
 (defun zotexo--check-and-update-all ()
   "Function run with `zotexo--check-timer'."
-  (when zotexo--auto-update-is-on 
-    (let ( out id any-z-buffer-p z-buffer-p) 
+  (when zotexo--auto-update-is-on
+    (let ( out id any-z-buffer-p z-buffer-p)
       (zotexo--message  "Zotexo checking for updates ...")
       (dolist (b  (buffer-list)) ;iterate through zotexo buffers
         (setq z-buffer-p (buffer-local-value 'zotexo-minor-mode b))
@@ -220,11 +224,11 @@ The following keys are bound in this minor mode:
         (when (and
                ;; zotexo buffer?
                z-buffer-p
-               ;; exclusion reg-exp  matched?, 
-               (not (delq nil (mapcar (lambda (reg)  
+               ;; exclusion reg-exp  matched?,
+               (not (delq nil (mapcar (lambda (reg)
                                         (string-match reg (buffer-name b)))
                                       zotexo--ignore-files)))
-               ;; collection is set?, 
+               ;; collection is set?,
                (assoc 'zotero-collection (buffer-local-value 'file-local-variables-alist b))
                ;; auto-update-all?, auto-update?
                (let ((auto-update
@@ -286,7 +290,8 @@ Error if zotero collection is not found by MozRepl"
                    (null bib-last-change)
                    (time-less-p bib-last-change zotero-last-change)))
       (setq cstr (format zotexo--export-collection-js bibfile id))
-      ;; (print cstr)
+      (zotexo--message (format "Executing command: \n\n (moz-command (format zotexo--export-collection-js '%s' %s))\n\n translated as:\n %s\n"
+			       bibfile id cstr))
       (message "Updating '%s' ..." (file-name-nondirectory bibfile))
       (with-current-buffer (moz-command cstr)
         (goto-char (point-min))
@@ -301,7 +306,7 @@ Error if zotero collection is not found by MozRepl"
 (defun zotexo--locate-bibliography-files (master-dir)
   ;; Scan buffer for bibliography macro and return as a list.
   ;; Modeled after the corresponding reftex function
-  
+
   (let ((files
          (save-excursion
            (goto-char (point-max))
@@ -311,11 +316,11 @@ Error if zotero collection is not found by MozRepl"
                  "\\(^\\)[^%\n\r]*\\\\\\("
                  (mapconcat 'identity reftex-bibliography-commands "\\|")
                  "\\){[ \t]*\\([^}]+\\)") nil t)
-               (setq files 
+               (setq files
                      (split-string (reftex-match-string 3)
                                    "[ \t\n\r]*,[ \t\n\r]*"))))))
     (when files
-      (setq files 
+      (setq files
             (mapcar
              (lambda (x)
                (if (or (member x reftex-bibfile-ignore-list)
@@ -476,7 +481,7 @@ Note that you have to start the MozRepl server from Firefox."
         (with-current-buffer zotexo--moz-buffer
           (set-marker (process-mark proc) (point-max)))
         (setq zotexo--startup-error-count 0))
-    (file-error 
+    (file-error
      (let ((buf (get-buffer-create "*MozRepl Error*")))
        (setq zotexo--startup-error-count (1+ zotexo--startup-error-count))
        (with-current-buffer buf
@@ -550,7 +555,7 @@ output is inserted in that buffer. BUF is erased before use.
     (save-excursion
       ;; (set-buffer sbuffer)
       (when (process-get proc 'busy)
-        (process-send-string proc ";\n") ;; clean up unfinished 
+        (process-send-string proc ";\n") ;; clean up unfinished
         (sleep-for 0 100)
         (when (process-get proc 'busy)
           (error
@@ -583,7 +588,7 @@ output is inserted in that buffer. BUF is erased before use.
       ))
   buf)
 
- 
+
 (defun moz-wait-for-process (proc &optional wait)
   "Wait for 'busy property of the process to become nil.
 If SEC-PROMPT is non-nil return if secondary prompt is detected
@@ -592,7 +597,7 @@ WAIT is non-nil wait for WAIT seconds for process output before
 the prompt check, default 0.01s. "
   ;; (unless (eq (process-status proc) 'run)
   ;;   (error "MozRepl process has died unexpectedly."))
-  (setq wait (or wait 0.01)) 
+  (setq wait (or wait 0.01))
   (save-excursion
     (while (or (accept-process-output proc wait)
 	       (process-get proc 'busy)))))
