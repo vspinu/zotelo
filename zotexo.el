@@ -96,6 +96,7 @@ zotero.getStorageDirectory().path;")
 (defun zotexo--message (str)
   (when zotexo--verbose
     (with-current-buffer "*Messages*"
+      (goto-char (point-max))
       (insert (format "\n zotexo message on [%s]\n %s\n" (current-time-string) str)))))
 
 (defvar zotexo--render-collection-js
@@ -275,6 +276,8 @@ Error if zotero collection is not found by MozRepl"
       (message "Cannot find bibliography reference in the file '%s'.\n  Ussing '%s' for BibTeX export." (buffer-name) file-name)
       )
     (setq bib-last-change (nth 5 (file-attributes bibfile))) ;; nil if bibfile does not exist yet
+    (setq bibfile (replace-regexp-in-string "\\" "\\"
+					    (convert-standard-filename bibfile) nil 'literal))
     (when (and (called-interactively-p) (null id))
       (zotexo-set-collection "Zotero collection is not set. Choose one: " t)
       (setq id (zotexo--get-local-collection-id)))
@@ -478,6 +481,7 @@ Note that you have to start the MozRepl server from Firefox."
 					:host zotexo--moz-host :service zotexo--moz-port
 					:filter 'moz-ordinary-insertion-filter)))
         (sleep-for 0 100)
+	(set-process-query-on-exit-flag proc nil)
         (with-current-buffer zotexo--moz-buffer
           (set-marker (process-mark proc) (point-max)))
         (setq zotexo--startup-error-count 0))
