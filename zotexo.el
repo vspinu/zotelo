@@ -275,7 +275,7 @@ Error if zotero collection is not found by MozRepl"
       (message "Cannot find bibliography reference in the file '%s'.\n  Ussing '%s' for BibTeX export." (buffer-name) file-name)
       )
     (setq bib-last-change (nth 5 (file-attributes bibfile))) ;; nil if bibfile does not exist yet
-    (setq bibfile (replace-regexp-in-string "\\" "\\"
+    (setq bibfile (replace-regexp-in-string "\\\\" "\\\\"
 					    (convert-standard-filename bibfile) nil 'literal))
     (when (and (called-interactively-p) (null id))
       (zotexo-set-collection "Zotero collection is not set. Choose one: " t)
