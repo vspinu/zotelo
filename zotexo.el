@@ -103,12 +103,8 @@ zotero.getStorageDirectory().path;")
   "var render_collection = function(coll, prefix) {
     var R=%s;
     var zotero = Components.classes['@zotero.org/Zotero;1'].getService(Components.interfaces.nsISupports).wrappedJSObject;
-    if (!coll) {
-        coll = null;
-    };
-    if (!prefix){
-        prefix='';
-    };
+    if (!coll) {coll = null}
+    if (!prefix){prefix=''};
     var collections = zotero.getCollections(coll);
     for (c in collections) {
         full_name = prefix + '/' + collections[c].name;
@@ -131,6 +127,7 @@ var recColl = prefs.getBoolPref('recursiveCollections');
 prefs.setBoolPref('recursiveCollections', true);
 var file = Components.classes['@mozilla.org/file/local;1'].createInstance(Components.interfaces.nsILocalFile);
 file.initWithPath(filename);
+//split
 var zotero = Components.classes['@zotero.org/Zotero;1'].getService(Components.interfaces.nsISupports).wrappedJSObject;
 var collection = true;
 var translator = new zotero.Translate('export');
@@ -138,6 +135,7 @@ if (id != 0){ //not all collections
     collection = zotero.Collections.get(id);
     translator.setCollection(collection);
 };
+//split
 if(collection){
     translator.setLocation(file);
     translator.setTranslator('9cb70025-a888-4a29-a210-93ec52da40d4');
@@ -146,6 +144,7 @@ if(collection){
 }else{
     out='Collection with the id ' + id + ' does not exist.';
 };
+//split
 prefs.setBoolPref('recursiveCollections', recColl);
 out;
 "
@@ -551,11 +550,17 @@ Note that you have to start the MozRepl server from Firefox."
 from the MozRepl process buffer.  If an optional second argument BUF
 exists, it must be a string or an existing buffer object. The
 output is inserted in that buffer. BUF is erased before use.
+
+New line is automatically appended.
+
+If COM contains \"//split\" strings, it will be split in those
+places and executed sequentially.
 "
   (if buf
       (setq buf (get-buffer-create buf))
     (setq buf (get-buffer-create "*moz-command-output*")))
-  (let ((proc (zotexo--moz-process)))
+  (let ((proc (zotexo--moz-process))
+	com1)
     (save-excursion
       ;; (set-buffer sbuffer)
       (when (process-get proc 'busy)
@@ -573,15 +578,18 @@ output is inserted in that buffer. BUF is erased before use.
 	    (set-process-buffer proc buf)
 	    (set-process-filter proc 'moz-ordinary-insertion-filter)
 	    ;; Output is now going to BUF:
-	    (save-excursion
-	      (set-buffer buf)
-	      (erase-buffer)
-	      (set-marker (process-mark proc) (point-min))
-	      (process-put proc 'busy t)
-	      (process-send-string proc (concat com "\n"))
-	      (moz-wait-for-process proc)
-	      ;;(delete-region (point-at-bol) (point-max))
-	      )
+	    (setq com (split-string com "//split" t))
+	    (while (setq com1 (pop com))
+	      (save-excursion
+		(set-buffer buf)
+		(erase-buffer)
+		(set-marker (process-mark proc) (point-min))
+		(process-put proc 'busy t)
+		(dbg com1)
+		(process-send-string proc (concat com1 "\n"))
+		(moz-wait-for-process proc)
+		;;(delete-region (point-at-bol) (point-max))
+		))
 	    (if moz-verbose
 		(message "Moz-command finished")))
 	;; Restore old values for process filter
