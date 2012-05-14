@@ -1,47 +1,44 @@
-This packages provides `zotexo-minor-mode` and is primarly intended for latex users of emacs and [http://staff.science.uva.nl/~dominik/Tools/reftex/reftex-nutshell.html RefTeX]. It will synchronize on the fly BibTeX file and [http://www.zotero.org/ Zotero] collection associated with your file. 
+This packages provides `zotexo-minor-mode` and is primarily intended for latex users of emacs and [RefTeX](http://staff.science.uva.nl/~dominik/Tools/reftex/reftex-nutshell.html). It helps you efficiently synchronize BibTeX file and [Zotero](http://www.zotero.org) collection associated with your file. 
 
 
-== Instalation == 
+Installation
+===========
 
-Note: Zotexo doesn't seem to work properly on Windows, see this [http://code.google.com/p/zotexo/issues/detail?id=3 issue].
+Download [zotexo.el](https://zotexo.googlecode.com/svn/trunk/zotexo.el) and put it into your emacs path. Install [MozRepl](https://addons.mozilla.org/en-US/firefox/addon/mozrepl/) extension for Firefox and start it (you can also configure it for  auto-start).
 
-Download [https://zotexo.googlecode.com/svn/trunk/zotexo.el zotexo.el] and put it into your emacs path. Install [https://addons.mozilla.org/en-US/firefox/addon/mozrepl/ MozRepl] extension for Firefox and start it (you can also set it to auto start).
+You will need [RefTex](http://www.gnu.org/software/auctex/reftex.html), which comes with [AucTeX](http://www.gnu.org/s/auctex/). 
 
-You will also need [http://www.gnu.org/software/auctex/reftex.html RefTex], which comes with [http://www.gnu.org/s/auctex/ AucTeX]. 
+Finally, activate `zotexo-minor-mode` in `latex-mode`:
 
-Activate `zotexo-minor-mode` in `latex-mode`:
-
-{{{
+```lisp
 (require 'zotexo)
 (add-hook 'LaTeX-mode-hook 'zotexo-minor-mode)
-}}}
+```
 
 
-== Usage ==
+Usage
+=====
 
   _*Key-map*_
-   {{{
+   ```
 C-c z c         zotexo-set-collection (also C-c z s)
 C-c z u         zotexo-update-database
 C-c z r         zotexo-reset
-
-   }}}
-If you have a BibTeX bibliography declaration somewhere in your file:
-{{{
+   ```
+If a file contains a `BibTeX' bibliography declaration:
+```tex
 \bibliography{file_name}
-}}}
+```
+`zotexo` exports the associated Zotero collection as a `file_name.bib` file, otherwise it exports into `[current-file-name]_zotexo_.bib`.
 
-`zotexo` will use it to export the Zotero collection as a `file_name.bib` file, otherwise it will export to `"[current-file-name]_zotexo_.bib"`.
+To associate a zotero collection with the current buffer type `\C-c z c` (`zotexo-set-collection`). Select `*ALL*` to export
+the whole Zotero library (beware, if your library is big it might take awhile). 
 
-To associate a zotero collection with the current buffer type `\C-c z c` or `\C-c z s` (
-`zotexo-set-collection`. You can choose `*ALL*` to export
-the whole Zotero library (but beware, if your library is big it might take some time). 
+Zotexo uses [IDO](http://www.emacswiki.org/emacs/InteractivelyDoThings ) interface for the collection selection:
 
-Zotexo uses [http://www.emacswiki.org/emacs/InteractivelyDoThings IDO] interface for the collection selection:
+![set_collection](https://github.com/vitoshka/zotexo/raw/master/img/set_collection.png)
 
-<img src="https://zotexo.googlecode.com/svn/trunk/set_collection.png" width=600>
-
-<img src="https://zotexo.googlecode.com/svn/trunk/zotero_collection.png" width=600>
+![zotero_collection](https://github.com/vitoshka/zotexo/raw/master/img/zotero_collection.png)
 
 Now you can use  `'reftex-citation` command ("C-c ["`) to insert the citations into your file.
 
@@ -49,22 +46,23 @@ Now you can use  `'reftex-citation` command ("C-c ["`) to insert the citations i
 You can manually update the bibtex file with `C-c z u`
 (`zotexo-update-database`) or mark the buffer for automatic update with `C-c z m` (zotexo-mark-for-auto-update). Due to zotero limitations not all changes to the collection are detected. 
 
-Zotexo auto-updates bibtex files only if `zotexo--auto-update-is-on` is `t` (default is `nil`). You can always toggle it with `C-c z t`. The minor-mode indicator monitors this variable and is set to *"zx"* if `nil` or *"ZX"* if `t`. 
+Zotexo auto-updates bibtex files only if `zotexo--auto-update-is-on` is non-nil (default is `nil`). You can always toggle it with `C-c z t`. The minor-mode indicator is *"zx"* if this variable is `nil` and *"ZX"* otherwise.
 
-== Troubleshooting ==
+Troubleshooting
+===============
 
 If you get errors or spurious message switch to `*moz-command-output*` buffer and see what it the message. Normally you should see something like 
 
-{{{
+```
 ....> ":MozOK:"
 repl> 
-}}}
+```
 
 Also see the buffer `*ZotexoMozRepl*`, this is a primary buffer where mozrepl outputs it's messages. Normally it should be clean, showing only the startup message. 
 
 To further investigate your problem. Toggle `M-x zotexo-verbose RET` and try the problematic `C-c z u`. If case of an error, go to *messages* buffer. You should see womething like this:
 
-{{{
+```javascript
 
  zotexo message on [Mon Apr  9 18:44:53 2012]
  Executing command: 
@@ -97,8 +95,8 @@ if(collection){
 };
 prefs.setBoolPref('recursiveCollections', recColl);
 out;
-}}}
+```
 
-You should be able to execute this javascript with [https://github.com/bard/mozrepl/wiki/Emacs-integration moz-repl.el] Zotexo doesn't require moz-repl, but the idea is the same -- you should be able to send commands to moz-repl from emacs whatever way.
+You should be able to execute this javascript with [moz-repl.el](https://github.com/bard/mozrepl/wiki/Emacs-integration). Zotexo doesn't require _moz-repl_, but the idea is the same -- you should be able to send commands to moz-repl from emacs whatever way.
 
 
