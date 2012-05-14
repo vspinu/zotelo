@@ -585,7 +585,6 @@ places and executed sequentially.
 		(erase-buffer)
 		(set-marker (process-mark proc) (point-min))
 		(process-put proc 'busy t)
-		(dbg com1)
 		(process-send-string proc (concat com1 "\n"))
 		(moz-wait-for-process proc)
 		;;(delete-region (point-at-bol) (point-max))
