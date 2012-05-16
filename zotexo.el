@@ -70,12 +70,12 @@ variable `zotexo-auto-update'. See
 `zotexo-mark-for-auto-update'. ")
 
 (defvar zotexo--get-zotero-database-js
-  "var zotero = Components.classes['@zotero.org/Zotero;1'].getService(Components.interfaces.nsISupports).wrappedJSObject;
-zotero.getZoteroDatabase().path;")
+  "var zotexo_zotero = Components.classes['@zotero.org/Zotero;1'].getService(Components.interfaces.nsISupports).wrappedJSObject;
+zotexo_zotero.getZoteroDatabase().path;")
 
 (defvar zotexo--get-zotero-storage-js
-  "var zotero = Components.classes['@zotero.org/Zotero;1'].getService(Components.interfaces.nsISupports).wrappedJSObject;
-zotero.getStorageDirectory().path;")
+  "var zotexo_zotero = Components.classes['@zotero.org/Zotero;1'].getService(Components.interfaces.nsISupports).wrappedJSObject;
+zotexo_zotero.getStorageDirectory().path;")
 
 (defvar zotexo--auto-update-is-on nil
   "If t zotexo monitors changes in zotero database and reexports
@@ -99,7 +99,7 @@ zotero.getStorageDirectory().path;")
       (insert (format "\n zotexo message on [%s]\n %s\n" (current-time-string) str)))))
 
 (defvar zotexo--render-collection-js
-  "var render_collection = function(coll, prefix) {
+  "var zotexo_render_collection = function(coll, prefix) {
     var R=%s;
     var zotero = Components.classes['@zotero.org/Zotero;1'].getService(Components.interfaces.nsISupports).wrappedJSObject;
     if (!coll) {coll = null}
@@ -109,56 +109,58 @@ zotero.getStorageDirectory().path;")
         full_name = prefix + '/' + collections[c].name;
         R.print(collections[c].id + ' ' + full_name);
         if (collections[c].hasChildCollections) {
-	    var name = render_collection(collections[c].id, full_name);
+	    var name = zotexo_render_collection(collections[c].id, full_name);
         };
     };
 };
 "
   )
 
-
+;;;; moz-repl splits long commands. Need to send it partially, but then errors
+;;;; in first parts are not visible ... :(
+;;;; todo: insert the check dirrectly in moz-command ??? 
 (defvar zotexo--export-collection-js
   "
-var filename=('%s');
-var id = %s;
-var prefs = Components.classes['@mozilla.org/preferences-service;1'].getService(Components.interfaces.nsIPrefService).getBranch('extensions.zotero.');
-var recColl = prefs.getBoolPref('recursiveCollections');
-prefs.setBoolPref('recursiveCollections', true);
-var file = Components.classes['@mozilla.org/file/local;1'].createInstance(Components.interfaces.nsILocalFile);
-file.initWithPath(filename);
+var zotexo_filename=('%s');
+var zotexo_id = %s;
+var zotexo_prefs = Components.classes['@mozilla.org/preferences-service;1'].getService(Components.interfaces.nsIPrefService).getBranch('extensions.zotero.');
+var zotexo_recColl = zotexo_prefs.getBoolPref('recursiveCollections');
+zotexo_prefs.setBoolPref('recursiveCollections', true);
+var zotexo_file = Components.classes['@mozilla.org/file/local;1'].createInstance(Components.interfaces.nsILocalFile);
+zotexo_file.initWithPath(zotexo_filename);
 //split
-var zotero = Components.classes['@zotero.org/Zotero;1'].getService(Components.interfaces.nsISupports).wrappedJSObject;
-var collection = true;
-var translator = new zotero.Translate('export');
-if (id != 0){ //not all collections
-    collection = zotero.Collections.get(id);
-    translator.setCollection(collection);
+var zotexo_zotero = Components.classes['@zotero.org/Zotero;1'].getService(Components.interfaces.nsISupports).wrappedJSObject;
+var zotexo_collection = true;
+var zotexo_translator = new zotexo_zotero.Translate('export');
+if (zotexo_id != 0){ //not all collections
+    zotexo_collection = zotexo_zotero.Collections.get(zotexo_id);
+    zotexo_translator.setCollection(zotexo_collection);
 };
 //split
-if(collection){
-    translator.setLocation(file);
-    translator.setTranslator('9cb70025-a888-4a29-a210-93ec52da40d4');
-    translator.translate();
-    out=':MozOK:';
+if(zotexo_collection){
+    zotexo_translator.setLocation(zotexo_file);
+    zotexo_translator.setTranslator('9cb70025-a888-4a29-a210-93ec52da40d4');
+    zotexo_translator.translate();
+    zotexo_out=':MozOK:';
 }else{
-    out='Collection with the id ' + id + ' does not exist.';
+    zotexo_out='Collection with the id ' + zotexo_id + ' does not exist.';
 };
 //split
-prefs.setBoolPref('recursiveCollections', recColl);
-out;
+zotexo_prefs.setBoolPref('recursiveCollections', zotexo_recColl);
+zotexo_out;
 "
   "Command to be sent to zotero request export."
   )
 
 (defvar zotexo--dateModified-js
   "
-var zotero = Components.classes['@zotero.org/Zotero;1'].getService(Components.interfaces.nsISupports).wrappedJSObject;
-var id = %s;
-var collection = zotero.Collections.get(id);
-if(collection){
-   ':MozOK:' + collection.dateModified;
+varzotexo_ zotero = Components.classes['@zotero.org/Zotero;1'].getService(Components.interfaces.nsISupports).wrappedJSObject;
+var zotexo_id = %s;
+var zotexo_collection = zotexo_zotero.Collections.get(zotexo_id);
+if(zotexo_collection){
+   ':MozOK:' + zotexo_collection.dateModified;
 }else{
-   'Collection with the id ' + id + ' does not exist.';
+   'Collection with the id ' + zotexo_id + ' does not exist.';
 };"
 
   "Command to get last modification date of the collection.")
@@ -330,8 +332,7 @@ Error if zotero collection is not found by MozRepl"
                    ;; excluded file
                    nil
                  ;; find the file
-                 (or (reftex-locate-file x "bib" master-dir)
-                     (concat master-dir x ".bib"))))
+                 (concat master-dir x ".bib")))
              files))
       (delq nil files))
     ))
@@ -364,7 +365,7 @@ If not-update is t, don't update after setting the collecton.
           ;; set up the collection list
           (moz-command (format zotexo--render-collection-js
 			       (process-get (zotexo--moz-process) 'moz-prompt)))
-          (moz-command "render_collection()" buf)
+          (moz-command "zotexo_render_collection()" buf)
           (with-current-buffer buf
             (goto-char (point-min))
 	    (zotexo--message (format "Collections:\n %s" 
