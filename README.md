@@ -34,7 +34,7 @@ If a file contains a `BibTeX' bibliography declaration:
 `zotexo` exports the associated Zotero collection as a `file_name.bib` file, otherwise it exports into `[current-file-name]_zotexo_.bib`.
 
 To associate a zotero collection with the current buffer type `\C-c z c` (`zotexo-set-collection`). Select `*ALL*` to export
-the whole Zotero library (beware, if your library is big it might take awhile). 
+the whole Zotero library (but beware, if your library is big it might take awhile). Now you can use  `'reftex-citation` command (`C-c [`) to insert the citations into your file.
 
 Zotexo uses [IDO](http://www.emacswiki.org/emacs/InteractivelyDoThings ) interface for the collection selection:
 
@@ -42,10 +42,8 @@ Zotexo uses [IDO](http://www.emacswiki.org/emacs/InteractivelyDoThings ) interfa
 
 ![zotero_collection](https://github.com/vitoshka/zotexo/raw/master/img/zotero_collection.png)
 
-Now you can use  `'reftex-citation` command ("C-c ["`) to insert the citations into your file.
-
  
-Update the bibtex file with `C-c z u` (`zotexo-update-database`). This is a recommended way.  
+After modifying your zotero collection,  update the bibtex file with `C-c z u` (`zotexo-update-database`). This is a recommended way.  
 
 Alternatively you can  mark the buffer for automatic update with `C-c z m` (zotexo-mark-for-auto-update). Due to zotero limitations not all changes to the collection are detected. This also doesn't seem to work on Windows. Zotexo auto-updates bibtex files only if `zotexo--auto-update-is-on` is non-nil (default is `nil`). You can always toggle it with `C-c z t`. The minor-mode indicator is *"zx"* if this variable is `nil` and *"ZX"* otherwise.
 
