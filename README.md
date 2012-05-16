@@ -15,16 +15,18 @@ Finally, activate `zotexo-minor-mode` in `latex-mode`:
 (add-hook 'TeX-mode-hook 'zotexo-minor-mode)
 ```
 
+You might also want to activate `zotexo` in org mode if you use it to draft your
+LaTeX papers.
 
 Usage
 =====
 
-  _*Key-map*_
-   ```
+_*Key-map*_
+```
 C-c z c         zotexo-set-collection (also C-c z s)
 C-c z u         zotexo-update-database
 C-c z r         zotexo-reset
-   ```
+```
 If a file contains a `BibTeX' bibliography declaration:
 ```tex
 \bibliography{file_name}
