@@ -5,7 +5,6 @@
 ;; Maintainer: Spinu Vitalie
 ;; Copyright (C) 2011-2011, Spinu Vitalie, all rights reserved.
 ;; Created: Oct 2 2011
-;; Version: 0.3
 ;; URL: http://code.google.com/p/zotexo/
 ;; Keywords: zotero, emacs, reftex, bibtex, MozRepl
 ;;
