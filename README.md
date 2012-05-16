@@ -45,10 +45,9 @@ Zotexo uses [IDO](http://www.emacswiki.org/emacs/InteractivelyDoThings ) interfa
 Now you can use  `'reftex-citation` command ("C-c ["`) to insert the citations into your file.
 
  
-You can manually update the bibtex file with `C-c z u`
-(`zotexo-update-database`) or mark the buffer for automatic update with `C-c z m` (zotexo-mark-for-auto-update). Due to zotero limitations not all changes to the collection are detected. 
+Update the bibtex file with `C-c z u` (`zotexo-update-database`). This is a recommended way.  
 
-Zotexo auto-updates bibtex files only if `zotexo--auto-update-is-on` is non-nil (default is `nil`). You can always toggle it with `C-c z t`. The minor-mode indicator is *"zx"* if this variable is `nil` and *"ZX"* otherwise.
+Alternatively you can  mark the buffer for automatic update with `C-c z m` (zotexo-mark-for-auto-update). Due to zotero limitations not all changes to the collection are detected. This also doesn't seem to work on Windows. Zotexo auto-updates bibtex files only if `zotexo--auto-update-is-on` is non-nil (default is `nil`). You can always toggle it with `C-c z t`. The minor-mode indicator is *"zx"* if this variable is `nil` and *"ZX"* otherwise.
 
 Troubleshooting
 ===============
