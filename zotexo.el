@@ -54,8 +54,10 @@
 (defvar zotexo--check-timer nil
   "Global timer executed at `zotexo-check-interval' seconds. ")
 
-(defvar zotexo-check-interval 6
-  "Seconds between checks for zotero database changes.")
+(defvar zotexo-check-interval 5
+  "Seconds between checks for zotero database changes.
+Note that zotexo uses idle timer. Yeach time emacs is idle for
+this number of seconds zotexo checks for an update.")
 
 (defvar zotexo-use-ido t
   "If t will try to use ido interface")
@@ -102,7 +104,7 @@ zotexo_zotero.getStorageDirectory().path;")
   "var zotexo_render_collection = function(coll, prefix) {
     var R=%s;
     var zotero = Components.classes['@zotero.org/Zotero;1'].getService(Components.interfaces.nsISupports).wrappedJSObject;
-    if (!coll) {coll = null}
+    if (!coll) {coll = null};
     if (!prefix){prefix=''};
     var collections = zotero.getCollections(coll);
     for (c in collections) {
@@ -153,15 +155,14 @@ zotexo_out;
   )
 
 (defvar zotexo--dateModified-js
-  "
-varzotexo_ zotero = Components.classes['@zotero.org/Zotero;1'].getService(Components.interfaces.nsISupports).wrappedJSObject;
+  "var zotexo_zotero = Components.classes['@zotero.org/Zotero;1'].getService(Components.interfaces.nsISupports).wrappedJSObject;
 var zotexo_id = %s;
 var zotexo_collection = zotexo_zotero.Collections.get(zotexo_id);
 if(zotexo_collection){
    ':MozOK:' + zotexo_collection.dateModified;
 }else{
    'Collection with the id ' + zotexo_id + ' does not exist.';
-};"
+}"
 
   "Command to get last modification date of the collection.")
 
@@ -217,7 +218,7 @@ The following keys are bound in this minor mode:
   "Function run with `zotexo--check-timer'."
   (when zotexo--auto-update-is-on
     (let ( out id any-z-buffer-p z-buffer-p)
-      (zotexo--message  "Zotexo checking for updates ...")
+      (zotexo--message  "Zotexo checking for updates.")
       (dolist (b  (buffer-list)) ;iterate through zotexo buffers
         (setq z-buffer-p (buffer-local-value 'zotexo-minor-mode b))
         (when z-buffer-p
@@ -240,7 +241,7 @@ The following keys are bound in this minor mode:
                )
           (with-current-buffer b
             (ignore-errors
-              (setq id (zotexo-update-database t ))))
+              (setq id (zotexo-update-database t))))
           (when id
             (setq out
                   (append (list (buffer-name b)) out))
@@ -282,6 +283,7 @@ Error if zotero collection is not found by MozRepl"
       (zotexo-set-collection "Zotero collection is not set. Choose one: " t)
       (setq id (zotexo--get-local-collection-id)))
     (when check-zotero-change
+      (set-time-zone-rule t)
       (with-current-buffer (moz-command (format zotexo--dateModified-js id))
         (goto-char (point-min))
         (when (re-search-forward ":MozOK:" nil t) ;; ingore the error it is  cought latter
@@ -434,6 +436,7 @@ the end of the file.
   (interactive)
   (delete-process (zotexo--moz-process))
   (kill-buffer zotexo--moz-buffer)
+  (message "Killed moz process")
   )
 
 
