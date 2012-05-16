@@ -12,7 +12,7 @@ Finally, activate `zotexo-minor-mode` in `latex-mode`:
 
 ```lisp
 (require 'zotexo)
-(add-hook 'LaTeX-mode-hook 'zotexo-minor-mode)
+(add-hook 'TeX-mode-hook 'zotexo-minor-mode)
 ```
 
 
