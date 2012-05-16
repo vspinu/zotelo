@@ -337,6 +337,7 @@ Error if zotero collection is not found by MozRepl"
       (delq nil files))
     ))
 
+
 (defun zotexo-set-collection (&optional prompt not-update)
   "Ask for a zotero collection.
 Ido interface is used by default. If you don't like it set `zotexo-use-ido' to nil.
@@ -367,6 +368,8 @@ If not-update is t, don't update after setting the collecton.
           (moz-command "render_collection()" buf)
           (with-current-buffer buf
             (goto-char (point-min))
+	    (zotexo--message (format "Collections:\n %s" 
+				     (buffer-substring-no-properties (point-min) (min 500 (point-max)))))
             (let (name  id )
               (while (re-search-forward "^\\([0-9]+\\) /\\(.*\\)$" nil t)
                 (setq id (match-string-no-properties 1)
@@ -396,6 +399,7 @@ If not-update is t, don't update after setting the collecton.
         )
       ))
   )
+
 
 
 
