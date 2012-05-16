@@ -4,7 +4,7 @@ This packages provides `zotexo-minor-mode` and is primarily intended for latex u
 Installation
 ===========
 
-Download [zotexo.el](https://zotexo.googlecode.com/svn/trunk/zotexo.el) and put it into your emacs path. Install [MozRepl](https://addons.mozilla.org/en-US/firefox/addon/mozrepl/) extension for Firefox and start it (you can also configure it for  auto-start).
+Download [zotexo.el](https://raw.github.com/vitoshka/zotexo/master/zotexo.el) and put it into your emacs path. Install [MozRepl](https://addons.mozilla.org/en-US/firefox/addon/mozrepl/) extension for Firefox and start it (you can also configure it for  auto-start).
 
 You will need [RefTex](http://www.gnu.org/software/auctex/reftex.html), which comes with [AucTeX](http://www.gnu.org/s/auctex/). 
 
