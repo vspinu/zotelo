@@ -282,6 +282,8 @@ Error if zotero collection is not found by MozRepl"
     (when (and (called-interactively-p) (null id))
       (zotexo-set-collection "Zotero collection is not set. Choose one: " t)
       (setq id (zotexo--get-local-collection-id)))
+    (unless (file-exists-p (file-name-directory bibfile))
+      (error "Directory '%s' does not exist; create it first." (file-name-directory bibfile)))
     (when check-zotero-change
       (set-time-zone-rule t)
       (with-current-buffer (moz-command (format zotexo--dateModified-js id))
@@ -338,8 +340,17 @@ Error if zotero collection is not found by MozRepl"
                    ;; excluded file
                    nil
                  ;; find the file
-                 (concat master-dir x ".bib")))
-             files))
+		 (let* ((file (expand-file-name
+			       (or  (reftex-locate-file x "bib" master-dir)
+				    x)
+			       master-dir))
+			(ext (file-name-extension file)))
+		   (if (and  ext
+			     (string= ext "bib"))
+		       file
+		     (concat file ".bib"))
+		   )))
+	     files))
       (delq nil files))
     ))
 
