@@ -270,7 +270,7 @@ Error if zotero collection is not found by MozRepl"
         (proc  (zotexo--moz-process))
         (id (zotexo--get-local-collection-id))
         (file-name (file-name-nondirectory (file-name-sans-extension (buffer-file-name))))
-        all-colls-p cstr bib-last-change zotero-last-change)
+        all-colls-p cstr bib-last-change zotero-last-change com1)
     (when (null bibfile)
       (setq file-name (concat file-name "_zotexo_.bib"))
       (setq bibfile (concat default-directory file-name ))
@@ -298,12 +298,16 @@ Error if zotero collection is not found by MozRepl"
       (zotexo--message (format "Executing command: \n\n (moz-command (format zotexo--export-collection-js '%s' %s))\n\n translated as:\n %s\n"
 			       bibfile id cstr))
       (message "Updating '%s' ..." (file-name-nondirectory bibfile))
-      (with-current-buffer (moz-command cstr)
-        (goto-char (point-min))
-        (if (re-search-forward ":MozOK:" nil t)
-            (message "'%s' updated successfully" (file-name-nondirectory bibfile))
-          (message "MozError (Firefox running?, MozRepl started?): \n%s" (buffer-substring-no-properties (point) (point-max)))
+      (setq com (split-string cstr "//split" t))
+      (while (setq com1 (pop com))
+	(when com ;; append to all except the last one
+	  (setq com1 (concat com1 "\":MozOk:\"")))
+	(with-current-buffer (moz-command com1)
+	  (goto-char (point-min))
+	  (unless (re-search-forward ":MozOK:" nil t)
+	    (error "MozError (Firefox running?, MozRepl started?): \n%s" (buffer-substring-no-properties (point) (point-max))))
           ))
+      (message "'%s' updated successfully" (file-name-nondirectory bibfile))
       id)
     )
   )
@@ -559,15 +563,11 @@ exists, it must be a string or an existing buffer object. The
 output is inserted in that buffer. BUF is erased before use.
 
 New line is automatically appended.
-
-If COM contains \"//split\" strings, it will be split in those
-places and executed sequentially.
 "
   (if buf
       (setq buf (get-buffer-create buf))
     (setq buf (get-buffer-create "*moz-command-output*")))
-  (let ((proc (zotexo--moz-process))
-	com1)
+  (let ((proc (zotexo--moz-process)))
     (save-excursion
       ;; (set-buffer sbuffer)
       (when (process-get proc 'busy)
@@ -585,19 +585,16 @@ places and executed sequentially.
 	    (set-process-buffer proc buf)
 	    (set-process-filter proc 'moz-ordinary-insertion-filter)
 	    ;; Output is now going to BUF:
-	    (setq com (split-string com "//split" t))
-	    (while (setq com1 (pop com))
-	      (save-excursion
-		(set-buffer buf)
-		(erase-buffer)
-		(set-marker (process-mark proc) (point-min))
-		(process-put proc 'busy t)
-		(process-send-string proc (concat com1 "\n"))
-		(moz-wait-for-process proc)
-		;;(delete-region (point-at-bol) (point-max))
-		))
-	    (if moz-verbose
-		(message "Moz-command finished")))
+	    (save-excursion
+	      (set-buffer buf)
+	      (erase-buffer)
+	      (set-marker (process-mark proc) (point-min))
+	      (process-put proc 'busy t)
+	      (process-send-string proc (concat com "\n"))
+	      (moz-wait-for-process proc)
+	      ;;(delete-region (point-at-bol) (point-max))
+	      )
+	    (zotexo--message "Moz-command finished"))
 	;; Restore old values for process filter
 	(set-process-buffer proc oldpb)
 	(set-process-filter proc oldpf)
