@@ -25,6 +25,7 @@ _*Key-map*_
 ```
 C-c z c         zotexo-set-collection (also C-c z s)
 C-c z u         zotexo-update-database
+C-c z U         zotexo-update-database-secondary
 C-c z r         zotexo-reset
 ```
 If a file contains a `BibTeX' bibliography declaration:
@@ -45,7 +46,14 @@ Zotexo uses [IDO](http://www.emacswiki.org/emacs/InteractivelyDoThings ) interfa
  
 After modifying your zotero collection,  update the bibtex file with `C-c z u` (`zotexo-update-database`). This is a recommended way.  
 
-Alternatively you can  mark the buffer for automatic update with `C-c z m` (zotexo-mark-for-auto-update). Due to zotero limitations not all changes to the collection are detected. This also doesn't seem to work on Windows. Zotexo auto-updates bibtex files only if `zotexo--auto-update-is-on` is non-nil (default is `nil`). You can always toggle it with `C-c z t`. The minor-mode indicator is *"zx"* if this variable is `nil` and *"ZX"* otherwise.
+Alternatively you can  mark the buffer for automatic update with `C-c z m` (zotexo-mark-for-auto-update). Due to zotero limitations not all changes to the collection are detected. This also doesn't seem to work on Windows (emacs hangs). Zotexo auto-updates bibtex files only if `zotexo--auto-update-is-on` is non-nil (default is `nil`). You can always toggle it with `C-c z t`. The minor-mode indicator is *"zx"* if this variable is `nil` and *"ZX"* otherwise.
+
+Multiple Databases and Collections
+----------------------------------
+
+You can list several files in `\thebibliography{...}`. The first file is the primary database which you set and update with `C-c z s` and `C-c z u` respectively. All others are secondary databases. 
+
+Usually one database is enough, but for some project you might want to use several zotero collections. Use `zotexo-export-secondary` (bound to `C-c z e`) to export any zotero collection into one of the secondary files.  You will be asked to select a file and a collection to export. This way you can have as many databases and zotero collections as you want. 
 
 Troubleshooting
 ===============

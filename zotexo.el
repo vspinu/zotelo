@@ -44,8 +44,7 @@
 (defvar zotexo-minor-mode-map
   (let ((map (make-sparse-keymap)))
     (define-key map "\C-czu" 'zotexo-update-database)
-    (define-key map "\C-cz\S-u" 'zotexo-update-database-secondary)
-    ;; (define-key map (kbd "C-c z S-u") 'zotexo-update-database-secondary)
+    (define-key map "\C-cze" 'zotexo-export-secondary)
     (define-key map "\C-czs" 'zotexo-set-collection)
     (define-key map "\C-czc" 'zotexo-set-collection)
     (define-key map "\C-czm" 'zotexo-mark-for-auto-update)
@@ -262,7 +261,7 @@ The following keys are bound in this minor mode:
 
 
 
-(defun zotexo-update-database-secondary ()
+(defun zotexo-export-secondary ()
   "Export zotero collection into  secondary BibTeX database.
 
 Before export, ask for a secondary BibTeX database and zotero
