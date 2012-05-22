@@ -44,6 +44,8 @@
 (defvar zotexo-minor-mode-map
   (let ((map (make-sparse-keymap)))
     (define-key map "\C-czu" 'zotexo-update-database)
+    (define-key map "\C-cz\S-u" 'zotexo-update-database-secondary)
+    ;; (define-key map (kbd "C-c z S-u") 'zotexo-update-database-secondary)
     (define-key map "\C-czs" 'zotexo-set-collection)
     (define-key map "\C-czc" 'zotexo-set-collection)
     (define-key map "\C-czm" 'zotexo-mark-for-auto-update)
@@ -126,9 +128,8 @@ zotexo_zotero.getStorageDirectory().path;")
 var zotexo_filename=('%s');
 var zotexo_id = %s;
 var zotexo_prefs = Components.classes['@mozilla.org/preferences-service;1'].getService(Components.interfaces.nsIPrefService).getBranch('extensions.zotero.');
-var zotexo_recColl = zotexo_prefs.getBoolPref('recursiveCollections');
-zotexo_prefs.setBoolPref('recursiveCollections', true);
 var zotexo_file = Components.classes['@mozilla.org/file/local;1'].createInstance(Components.interfaces.nsILocalFile);
+var zotexo_recColl = zotexo_prefs.getBoolPref('recursiveCollections');
 zotexo_file.initWithPath(zotexo_filename);
 //split
 var zotexo_zotero = Components.classes['@zotero.org/Zotero;1'].getService(Components.interfaces.nsISupports).wrappedJSObject;
@@ -142,13 +143,14 @@ if (zotexo_id != 0){ //not all collections
 if(zotexo_collection){
     zotexo_translator.setLocation(zotexo_file);
     zotexo_translator.setTranslator('9cb70025-a888-4a29-a210-93ec52da40d4');
+    zotexo_prefs.setBoolPref('recursiveCollections', true);
     zotexo_translator.translate();
+    zotexo_prefs.setBoolPref('recursiveCollections', zotexo_recColl);
     zotexo_out=':MozOK:';
 }else{
     zotexo_out='Collection with the id ' + zotexo_id + ' does not exist.';
 };
 //split
-zotexo_prefs.setBoolPref('recursiveCollections', zotexo_recColl);
 zotexo_out;
 "
   "Command to be sent to zotero request export."
@@ -177,7 +179,7 @@ for zotero collection and stores it as file local variable . To
 manually update the BibTeX data base call
 `zotexo-update-database'. The \"file_name.bib\" file will be
 created with the exported zotero items. To specify the file_name
-just insert insert \bibliography{file_name} anywhere in the
+just insert insert \\bibliography{file_name} anywhere in the
 buffer.
 
 This mode is designed mainly for latex modes and works in
@@ -258,17 +260,52 @@ The following keys are bound in this minor mode:
         )
       )))
 
-(defun zotexo-update-database (&optional check-zotero-change)
-  "Update zotero database for the current buffer.
 
-If called interactively, ask for collection if not defined in the
-current buffer.  If non-interactive and file not found create 'fileName_zotexo_.bib' file.
+
+(defun zotexo-update-database-secondary ()
+  "Export zotero collection into  secondary BibTeX database.
+
+Before export, ask for a secondary BibTeX database and zotero
+collection to be exported into the database. Secondary databases
+are those in \\bibliography{file1, file2, ...}, except the first
+one.
+
+Error ocures if there is only one (primary) BibTeX database in
+\\bibliography{...} listing.
 
 Error if zotero collection is not found by MozRepl"
-  (interactive "P")
-  (let ((bibfile (car (zotexo--locate-bibliography-files default-directory)))
+  (interactive)
+  (let* ((files (zotexo--locate-bibliography-files default-directory))
+	 (bibfile (cond
+		   ((< (length files) 2)
+		   (error "No secondary databases (\\bibliography{...} lists contain less than 2 files)."))
+		   ((= (length files) 2)
+		    (cadr files))
+		   (t (zotexo--read (cdr files) "File to update: "))))
+	 (collection (zotexo-set-collection
+		      (format "Export into '%s': " (file-name-nondirectory bibfile))
+		      'no-update 'no-set)))
+    (zotexo-update-database nil bibfile (get-text-property 0 'zotero-id collection))))
+  
+
+(defun zotexo-update-database (&optional check-zotero-change bibfile id)
+  "Update the primary BibTeX database associated with the current buffer.
+
+Primary database is the first file in \\bibliography{file1, file2,
+...}, list. If you want to export into a different file use
+`zotexo-update-database-secondary'.
+
+If BIBFILE is supplied, don't infer from \\bibliography{...} statement.
+
+If ID is supplied, don't infer collection id from file local variables.
+
+Through error if zotero collection is not found by MozRepl"
+  (interactive)
+  (let ((bibfile (or bibfile
+		     (car (zotexo--locate-bibliography-files default-directory))))
         (proc  (zotexo--moz-process))
-        (id (zotexo--get-local-collection-id))
+        (id (or id
+		(zotexo--get-local-collection-id)))
         (file-name (file-name-nondirectory (file-name-sans-extension (buffer-file-name))))
         all-colls-p cstr bib-last-change zotero-last-change com1)
     (when (null bibfile)
@@ -280,7 +317,7 @@ Error if zotero collection is not found by MozRepl"
     (setq bibfile (replace-regexp-in-string "\\\\" "\\\\"
 					    (convert-standard-filename bibfile) nil 'literal))
     (when (and (called-interactively-p) (null id))
-      (zotexo-set-collection "Zotero collection is not set. Choose one: " t)
+      (zotexo-set-collection "Zotero collection is not set. Choose one: " 'no-update)
       (setq id (zotexo--get-local-collection-id)))
     (unless (file-exists-p (file-name-directory bibfile))
       (error "Directory '%s' does not exist; create it first." (file-name-directory bibfile)))
@@ -355,68 +392,53 @@ Error if zotero collection is not found by MozRepl"
     ))
 
 
-(defun zotexo-set-collection (&optional prompt not-update)
+(defun zotexo-set-collection (&optional prompt no-update no-file-local)
   "Ask for a zotero collection.
 Ido interface is used by default. If you don't like it set `zotexo-use-ido' to nil.
+
 
 In `ido-mode' use \"C-s\" and \"C-r\" for navigation. See
 ido-mode emacs wiki for many more details.
 
-If not-update is t, don't update after setting the collecton.
+If no-update is t, don't update after setting the collecton.
+
+If no-file-local is non-nill don't set file-local variable.
+
+Return the properized collection name.
 "
   (interactive)
   (let ((buf (get-buffer-create "*moz-command-output*"))
-        reset-ido colls)
-    (when  (and (not ido-mode)
-                (featurep 'ido )
-                zotexo-use-ido)
-      ;; ido initialization
-      (setq reset-ido t)
-      (ido-init-completion-maps)
-      (add-hook 'minibuffer-setup-hook 'ido-minibuffer-setup)
-      (add-hook 'choose-completion-string-functions 'ido-choose-completion-string)
-      (add-hook 'kill-emacs-hook 'ido-kill-emacs-hook)
-      )
-    (unwind-protect
-        (progn
-          ;; set up the collection list
-          (moz-command (format zotexo--render-collection-js
-			       (process-get (zotexo--moz-process) 'moz-prompt)))
-          (moz-command "zotexo_render_collection()" buf)
-          (with-current-buffer buf
-            (goto-char (point-min))
-	    (zotexo--message (format "Collections:\n %s" 
-				     (buffer-substring-no-properties (point-min) (min 500 (point-max)))))
-            (let (name  id )
-              (while (re-search-forward "^\\([0-9]+\\) /\\(.*\\)$" nil t)
-                (setq id (match-string-no-properties 1)
-                      name (match-string-no-properties 2))
-                (setq colls (cons
-                             (propertize name 'zotero-id id)
-                             colls))))
-            )
-          (if (null colls)
-              (message "No collections found or error occured see *moz-command-output* buffer for clues.")
-            ;; (setq colls (mapcar 'remove-text-properties colls))
-            (setq name (zotexo--read (nreverse colls) prompt))
-            (save-excursion
-              (add-file-local-variable 'zotero-collection
-                                       (propertize (get-text-property 1 'zotero-id name)
-                                                   'name (substring-no-properties name)))
-              (hack-local-variables))
-            (unless not-update
-              (zotexo-update-database))
-            )
-          )
-      ;; ido initialization
-      (when reset-ido
-        (remove-hook 'minibuffer-setup-hook 'ido-minibuffer-setup)
-        (remove-hook 'choose-completion-string-functions 'ido-choose-completion-string)
-        (remove-hook 'kill-emacs-hook 'ido-kill-emacs-hook)
-        )
-      ))
-  )
+	colls name id)
+    ;; set up the collection list
+    (moz-command (format zotexo--render-collection-js
+			 (process-get (zotexo--moz-process) 'moz-prompt)))
+    (moz-command "zotexo_render_collection()" buf)
+    (with-current-buffer buf
+      (goto-char (point-min))
+      (zotexo--message (format "Collections:\n %s" 
+			       (buffer-substring-no-properties (point-min) (min 500 (point-max)))))
+      (while (re-search-forward "^\\([0-9]+\\) /\\(.*\\)$" nil t)
+	(setq id (match-string-no-properties 1)
+	      name (match-string-no-properties 2))
+	(setq colls (cons
+		     (propertize name 'zotero-id id)
+		     colls))))
 
+    (if (null colls)
+	(error "No collections found or error occured see *moz-command-output* buffer for clues.")
+      ;; (setq colls (mapcar 'remove-text-properties colls))
+      (setq name (zotexo--read (cons (propertize "*ALL*" 'zotero-id "0") (nreverse colls))
+			       prompt))
+      (unless no-file-local
+	(save-excursion
+	  (add-file-local-variable 'zotero-collection
+				   (propertize (get-text-property 0 'zotero-id name)
+					       'name (substring-no-properties name)))
+	  (hack-local-variables))
+	(unless no-update
+	  (zotexo-update-database)))
+      name
+      )))
 
 
 
@@ -469,10 +491,25 @@ started, otherwise you will start getting error screens. "
 
 (defun zotexo--read (collections &optional prompt)
   "Read a choice from zotero collections via Ido."
-  (ido-completing-read (or prompt "Collection : ")
-                       (cons (propertize "*ALL*" 'zotero-id "0")
-                             collections)
-                       nil t nil nil))
+  (let (reset-ido)
+    (when  (and (require 'ido)
+		(not ido-mode)
+		zotexo-use-ido)
+      ;; ido initialization
+      (setq reset-ido t)
+      (ido-init-completion-maps)
+      (add-hook 'minibuffer-setup-hook 'ido-minibuffer-setup)
+      (add-hook 'choose-completion-string-functions 'ido-choose-completion-string)
+      (add-hook 'kill-emacs-hook 'ido-kill-emacs-hook))
+    (unwind-protect
+	(ido-completing-read (or prompt "Collection : ") collections
+			     nil t nil nil)
+      (when reset-ido
+	(remove-hook 'minibuffer-setup-hook 'ido-minibuffer-setup)
+	(remove-hook 'choose-completion-string-functions 'ido-choose-completion-string)
+	(remove-hook 'kill-emacs-hook 'ido-kill-emacs-hook)
+	))))
+
 
 
 

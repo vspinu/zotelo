@@ -1,8 +1,7 @@
 var zotexo_filename=('/home/vitoshka/works/OP/OP.bib');
-var zotexo_id = 233;
+var zotexo_id = 3;
 var zotexo_prefs = Components.classes['@mozilla.org/preferences-service;1'].getService(Components.interfaces.nsIPrefService).getBranch('extensions.zotero.');
 var zotexo_recColl = zotexo_prefs.getBoolPref('recursiveCollections');
-zotexo_prefs.setBoolPref('recursiveCollections', true);
 var zotexo_file = Components.classes['@mozilla.org/file/local;1'].createInstance(Components.interfaces.nsILocalFile);
 zotexo_file.initWithPath(zotexo_filename);
 //split
@@ -17,13 +16,13 @@ if (zotexo_id != 0){ //not all collections
 if(zotexo_collection){
     zotexo_translator.setLocation(zotexo_file);
     zotexo_translator.setTranslator('9cb70025-a888-4a29-a210-93ec52da40d4');
+    zotexo_prefs.setBoolPref('recursiveCollections', true);
     zotexo_translator.translate();
+    zotexo_prefs.setBoolPref('recursiveCollections', zotexo_recColl);
     zotexo_out=':MozOK:';
 }else{
     zotexo_out='Collection with the id ' + zotexo_id + ' does not exist.';
 };
-//split
-zotexo_prefs.setBoolPref('recursiveCollections', zotexo_recColl);
 zotexo_out;
 
 
