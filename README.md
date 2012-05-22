@@ -51,9 +51,9 @@ Alternatively you can  mark the buffer for automatic update with `C-c z m` (zote
 Multiple Databases and Collections
 ----------------------------------
 
-You can list several files in `\thebibliography{...}`. The first file is the primary database which you set and update with `C-c z s` and `C-c z u` respectively. All others are secondary databases. 
+You can list several files in `\thebibliography{...}` list. The first file is the primary database which you set and update with `C-c z s` and `C-c z u` respectively. All others are secondary databases. 
 
-Usually one database is enough, but for some project you might want to use several zotero collections. Use `zotexo-export-secondary` (bound to `C-c z e`) to export any zotero collection into one of the secondary files.  You will be asked to select a file and a collection to export. This way you can have as many databases and zotero collections as you want. 
+Usually one database is enough, but for some projects you might want to use several zotero collections. Use `zotexo-export-secondary` (bound to `C-c z e`) to export any zotero collection into one of the secondary files.  You will be asked to select a file and a collection to export. This way you can have as many databases and zotero collections as you want. 
 
 Troubleshooting
 ===============
