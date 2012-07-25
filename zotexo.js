@@ -1,3 +1,38 @@
+var zotexo_render_collection = function() {
+    var R=%s;
+    var Zotero = Components.classes['@zotero.org/Zotero;1'] .getService(Components.interfaces.nsISupports).wrappedJSObject;
+    var print_names = function(collections, prefix){
+        for (c in collections) {
+            var fullname = prefix + '/' + collections[c].name;
+            R.print(collections[c].id + ' ' + fullname);
+            if (collections[c].hasChildCollections) {
+                var subcol = Zotero.getCollections(collections[c].id);
+                print_names(subcol, fullname); 
+            };
+        }};
+    print_names(Zotero.getCollections(), '');
+    var groups = Zotero.Groups.getAll();        
+    for (g in groups){
+        print_names(groups[g].getCollections(), 'group');
+    }};
+
+var zotexo_render_collection = function(coll, prefix) {
+    var R=%s;
+    var zotero = Components.classes['@zotero.org/Zotero;1'].getService(Components.interfaces.nsISupports).wrappedJSObject;
+    if (!coll) {coll = null};
+    if (!prefix){prefix=''};
+    var collections = zotero.getCollections(coll);
+    var full_name = "";
+    
+    for (c in collections) {
+        full_name = prefix + '/' + collections[c].name;
+        R.print(collections[c].id + ' ' + full_name);
+        if (collections[c].hasChildCollections) {
+	    var name = zotexo_render_collection(collections[c].id, full_name);
+        };
+    };
+};
+
 var zotexo_filename=('/home/vitoshka/works/OP/OP.bib');
 var zotexo_id = 3;
 var zotexo_prefs = Components.classes['@mozilla.org/preferences-service;1'].getService(Components.interfaces.nsIPrefService).getBranch('extensions.zotero.');

@@ -102,22 +102,25 @@ zotexo_zotero.getStorageDirectory().path;")
       (insert (format "\n zotexo message on [%s]\n %s\n" (current-time-string) str)))))
 
 (defvar zotexo--render-collection-js
-  "var zotexo_render_collection = function(coll, prefix) {
+  "var zotexo_render_collection = function() {
     var R=%s;
-    var zotero = Components.classes['@zotero.org/Zotero;1'].getService(Components.interfaces.nsISupports).wrappedJSObject;
-    if (!coll) {coll = null};
-    if (!prefix){prefix=''};
-    var collections = zotero.getCollections(coll);
-    for (c in collections) {
-        full_name = prefix + '/' + collections[c].name;
-        R.print(collections[c].id + ' ' + full_name);
-        if (collections[c].hasChildCollections) {
-	    var name = zotexo_render_collection(collections[c].id, full_name);
-        };
-    };
-};
+    var Zotero = Components.classes['@zotero.org/Zotero;1'].getService(Components.interfaces.nsISupports).wrappedJSObject;
+    var print_names = function(collections, prefix){
+        for (c in collections) {
+            var fullname = prefix + '/' + collections[c].name;
+            R.print(collections[c].id + ' ' + fullname);
+            if (collections[c].hasChildCollections) {
+                var subcol = Zotero.getCollections(collections[c].id);
+                print_names(subcol, fullname); 
+            }}};
+    print_names(Zotero.getCollections(), '');
+    var groups = Zotero.Groups.getAll();        
+    for (g in groups){
+        print_names(groups[g].getCollections(), '/*groups*/'+groups[g].name);
+    }};
 "
   )
+
 
 ;;;; moz-repl splits long commands. Need to send it partially, but then errors
 ;;;; in first parts are not visible ... :(
