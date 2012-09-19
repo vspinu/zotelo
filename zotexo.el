@@ -522,7 +522,7 @@ started, otherwise you will start getting error screens. "
 (defun zotexo--get-local-collection-id ()
   (cdr (assoc 'zotero-collection file-local-variables-alist)))
 
-(defun zotexo--read (collections &optional prompt)
+(defun zotexo--read (collections &optional prompt default)
   "Read a choice from zotero collections via Ido."
   (let (reset-ido)
     (when  (and (require 'ido)
@@ -535,7 +535,7 @@ started, otherwise you will start getting error screens. "
       (add-hook 'kill-emacs-hook 'ido-kill-emacs-hook))
     (unwind-protect
 	(ido-completing-read (or prompt "Collection: ") collections
-			     nil t nil nil)
+			     nil t nil nil default)
       (when reset-ido
 	(remove-hook 'minibuffer-setup-hook 'ido-minibuffer-setup)
 	(remove-hook 'choose-completion-string-functions 'ido-choose-completion-string)
