@@ -73,7 +73,8 @@ If nil the only updated files are those with non-nil file local
 variable `zotexo-auto-update'. See
 `zotexo-mark-for-auto-update'. ")
 
-(defgroup zotexo nil "Customization for Zotexo")
+(defgroup zotexo nil "Customization for Zotexo"
+  :group 'convenience)
 
 (defcustom zotexo-default-translator 'BibTeX
   "The name of the default zotero-translator to use (a symbol).
