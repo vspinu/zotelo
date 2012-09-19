@@ -88,11 +88,21 @@ You can set this varialbe interactively with
   :group 'zotexo)
 
 (defcustom zotexo-translators
-  '((BibTeX . "9cb70025-a888-4a29-a210-93ec52da40d4")
-    (BibLaTeX . "ba4cd274-f24e-42cf-8ff2-ccfc603aacf3"))
+  '((BibTeX "9cb70025-a888-4a29-a210-93ec52da40d4" "bib")
+    (BibLaTeX "ba4cd274-f24e-42cf-8ff2-ccfc603aacf3" "bib")
+    (BibLaTeX-cite "fe7a85a9-4cb5-4986-9cc3-e6b47d6660f7" "bib")
+    (Zotero-RDF "14763d24-8ba0-45df-8f52-b8d1108e7ac9" "rdf")
+    (Wikipedia "3f50aaac-7acc-4350-acd0-59cb77faf620" "txt")
+    (CSL-JSON "bc03b4fe-436d-4a1f-ba59-de4d2d7a63f7" "json")
+    (Bookmarks-HTML "4e7119e0-02be-4848-86ef-79a64185aad8" "html")
+    (Refer/BibIX  "881f60f2-0802-411a-9228-ce5f47b64c7d" "txt")
+    (RIS "32d59d2d-b65a-4da4-b0a3-bdd3cfb979e7" "ris")
+    (MODS  "0e2235e7-babf-413c-9acf-f27cce5f059c" "xml")
+    (Bibliontology-RDF "14763d25-8ba0-45df-8f52-b8d1108e7ac9" "rdf"))
   "An alist of zotero translators ids.
-Each cons cell consists of an user frendly key and an unique
-identifier used by zotero.
+Each cell consists an user friendly key, and a value is a list of
+an unique identifier used by zotero and an extension of the
+target file.
 
 Not all of the listed translatros are the default zotero
 translators. You have to search and download them yourself.
@@ -131,7 +141,7 @@ zotexo_zotero.getStorageDirectory().path;")
   (when zotexo--verbose
     (with-current-buffer "*Messages*"
       (goto-char (point-max))
-      (insert (format "\n zotexo message on [%s]\n %s\n" (current-time-string) str)))))
+      (insert (format "\n zotexo message [%s]\n %s\n" (current-time-string) str)))))
 
 (defvar zotexo--render-collection-js
   "var zotexo_render_collection = function() {
@@ -300,17 +310,16 @@ The following keys are bound in this minor mode:
 (defun zotexo-export-secondary ()
   "Export zotero collection into  secondary BibTeX database.
 
-Before export, ask for a secondary BibTeX database and zotero
-collection to be exported into the database. Secondary databases
-are those in \\bibliography{file1, file2, ...}, except the first
-one.
+Before export, ask for a secondary database and zotero collection
+to be exported into the database. Secondary databases are those
+in \\bibliography{file1, file2, ...}, except the first one.
 
-Error ocures if there is only one (primary) BibTeX database in
-\\bibliography{...} listing.
+Error ocures if there is only one (primary) file listed in 
+\\bibliography{...}.
 
 Error if zotero collection is not found by MozRepl"
   (interactive)
-  (let* ((files (zotexo--locate-bibliography-files default-directory))
+  (let* ((files (zotexo--locate-bibliography-files))
 	 (bibfile (cond
 		   ((< (length files) 2)
 		   (error "No secondary databases (\\bibliography{...} lists contain less than 2 files)."))
@@ -329,9 +338,9 @@ Error if zotero collection is not found by MozRepl"
   (let ((tnames (mapcar (lambda (el) (symbol-name (car el)))
                         zotexo-translators)))
     (setq zotexo-default-translator
-          (intern (zotexo--read tnames "Choose translator: ")))))
-    
-  
+          (intern (zotexo--read tnames "Choose translator: "
+                                (symbol-name zotexo-default-translator))))))
+      
   
 
 (defun zotexo-update-database (&optional check-zotero-change bibfile id)
@@ -345,29 +354,33 @@ If BIBFILE is supplied, don't infer from \\bibliography{...} statement.
 
 If ID is supplied, don't infer collection id from file local variables.
 
-Through error if zotero collection is not found by MozRepl"
+Through an error if zotero collection has not been found by MozRepl"
   (interactive)
   (let ((bibfile (or bibfile
-		     (car (zotexo--locate-bibliography-files default-directory))))
+		     (car (zotexo--locate-bibliography-files))))
         (proc  (zotexo--moz-process))
         (id (or id
 		(zotexo--get-local-collection-id)))
         (file-name (file-name-nondirectory (file-name-sans-extension (buffer-file-name))))
-        (trans-id (cdr (assoc zotexo-default-translator zotexo-translators)))
+        (translator (assoc zotexo-default-translator zotexo-translators))
         all-colls-p cstr bib-last-change zotero-last-change com1)
-    (unless trans-id
+    (unless translator
       (error "Cannot find translator %s in `zotexo-translators' alist" zotexo-default-translator))
-    (when (null bibfile)
-      (setq file-name (concat file-name "_zotexo_.bib"))
-      (setq bibfile (concat default-directory file-name ))
-      (message "Cannot find bibliography reference in the file '%s'.\n  Ussing '%s' for BibTeX export." (buffer-name) file-name)
+    
+    (unless bibfile
+      ;; (setq file-name (concat file-name "."))
+      (setq bibfile file-name)
+      (message "Using '%s' filename for %s export." file-name zotexo-default-translator)
       )
-    (setq bib-last-change (nth 5 (file-attributes bibfile))) ;; nil if bibfile does not exist yet
+    
+    (setq bibfile (concat (expand-file-name bibfile) "." (nth 2 translator)))
+    (setq bib-last-change (nth 5 (file-attributes bibfile))) ;; nil if bibfile does not exist
     (setq bibfile (replace-regexp-in-string "\\\\" "\\\\"
 					    (convert-standard-filename bibfile) nil 'literal))
     (when (and (called-interactively-p) (null id))
       (zotexo-set-collection "Zotero collection is not set. Choose one: " 'no-update)
       (setq id (zotexo--get-local-collection-id)))
+    
     (unless (file-exists-p (file-name-directory bibfile))
       (error "Directory '%s' does not exist; create it first." (file-name-directory bibfile)))
     (when check-zotero-change
@@ -382,7 +395,7 @@ Through error if zotero collection is not found by MozRepl"
                (or (null check-zotero-change)
                    (null bib-last-change)
                    (time-less-p bib-last-change zotero-last-change)))
-      (setq cstr (format zotexo--export-collection-js bibfile id trans-id))
+      (setq cstr (format zotexo--export-collection-js bibfile id (cadr translator)))
       (zotexo--message (format "Executing command: \n\n (moz-command (format zotexo--export-collection-js '%s' %s))\n\n translated as:\n %s\n"
 			       bibfile id cstr))
       (message "Updating '%s' ..." (file-name-nondirectory bibfile))
