@@ -87,7 +87,7 @@ You can set this varialbe interactively with
   :group 'zotexo)
 
 (defcustom zotexo-translators
-  '((BibTex . "9cb70025-a888-4a29-a210-93ec52da40d4")
+  '((BibTeX . "9cb70025-a888-4a29-a210-93ec52da40d4")
     (BibLaTeX . "ba4cd274-f24e-42cf-8ff2-ccfc603aacf3"))
   "An alist of zotero translators ids.
 Each cons cell consists of an user frendly key and an unique
