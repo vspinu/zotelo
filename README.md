@@ -1,4 +1,6 @@
-This packages provides `zotexo-minor-mode` and is primarily intended for latex users of emacs and [RefTeX](http://staff.science.uva.nl/~dominik/Tools/reftex/reftex-nutshell.html). It helps you efficiently synchronize BibTeX file and [Zotero](http://www.zotero.org) collection associated with your file. 
+Zotexo helps you efficiently export and synchronize local databases (bib, rdf, html, json etc) and [Zotero](http://www.zotero.org) collections directly from emacs.
+
+Zotexo can be used in conjunction with any emacs mode but is primarily intended for latex users of [RefTeX](http://staff.science.uva.nl/~dominik/Tools/reftex/reftex-nutshell.html).
 
 
 Installation
