@@ -49,7 +49,8 @@
     (define-key map "\C-czc" 'zotexo-set-collection)
     (define-key map "\C-czm" 'zotexo-mark-for-auto-update)
     (define-key map "\C-czr" 'zotexo-reset)
-    (define-key map "\C-czt" 'zotexo-toggle-auto-update)
+    (define-key map "\C-czt" 'zotexo-set-translator)
+    (define-key map "\C-czT" 'zotexo-toggle-auto-update)
     map))
 
 (defvar zotexo--check-timer nil
@@ -60,8 +61,8 @@
 Note that zotexo uses idle timer. Yeach time emacs is idle for
 this number of seconds zotexo checks for an update.")
 
-(defvar zotexo-use-ido t
-  "If t will try to use ido interface")
+;; (defvar zotexo-use-ido t
+;;   "If t will try to use ido interface")
 
 (defvar zotexo-auto-update-all nil
   "If t zotexo checks for the change in zotero database
@@ -72,15 +73,35 @@ If nil the only updated files are those with non-nil file local
 variable `zotexo-auto-update'. See
 `zotexo-mark-for-auto-update'. ")
 
-(defgroup Zotexo nil "Customization for Zotexo")
+(defgroup zotexo nil "Customization for Zotexo")
 
-(defcustom zotexo-translator-id "9cb70025-a888-4a29-a210-93ec52da40d4"
-  "The id of the zotero-translator to use
+(defcustom zotexo-default-translator 'BibTeX
+  "The name of the default zotero-translator to use (a symbol).
 
-standard BibTeX: '9cb70025-a888-4a29-a210-93ec52da40d4'
-BibLaTeX (downloaded from https://code.google.com/p/zotero-biblatex-export/): 'ba4cd274-f24e-42cf-8ff2-ccfc603aacf3'"
-  :type '(string)
-  :group 'Zotexo)
+Must correspond to one of the keys in `zotexo-translators' alist.
+
+You can set this varialbe interactively with
+`zotexo-set-translator'.
+"
+  :type 'symbol
+  :group 'zotexo)
+
+(defcustom zotexo-translators
+  '((BibTex . "9cb70025-a888-4a29-a210-93ec52da40d4")
+    (BibLaTeX . "ba4cd274-f24e-42cf-8ff2-ccfc603aacf3"))
+  "An alist of zotero translators ids.
+Each cons cell consists of an user frendly key and an unique
+identifier used by zotero.
+
+Not all of the listed translatros are the default zotero
+translators. You have to search and download them yourself.
+
+Standard BibTeX (zotero): '9cb70025-a888-4a29-a210-93ec52da40d4'
+BibLaTeX (downloaded from https://code.google.com/p/zotero-biblatex-export/): 'ba4cd274-f24e-42cf-8ff2-ccfc603aacf3'
+"
+  :group 'zotexo
+  :type 'alist
+)
 
 (defvar zotexo--get-zotero-database-js
   "var zotexo_zotero = Components.classes['@zotero.org/Zotero;1'].getService(Components.interfaces.nsISupports).wrappedJSObject;
@@ -93,7 +114,7 @@ zotexo_zotero.getStorageDirectory().path;")
 (defvar zotexo--auto-update-is-on nil
   "If t zotexo monitors changes in zotero database and reexports
   collections if needed.
-  You can toggle it with  'C-c z t'
+  You can toggle it with  'C-c z T'
 ")
 
 (defvar zotexo--ignore-files (list "_region_.tex"))
@@ -301,6 +322,17 @@ Error if zotero collection is not found by MozRepl"
     (zotexo-update-database nil bibfile (get-text-property 0 'zotero-id collection))))
   
 
+(defun zotexo-set-translator ()
+  "Ask to choose from available translators and set `zotexo-default-translator'."
+  (interactive)
+  (let ((tnames (mapcar (lambda (el) (symbol-name (car el)))
+                        zotexo-translators)))
+    (setq zotexo-default-translator
+          (intern (zotexo--read tnames "Choose translator: ")))))
+    
+  
+  
+
 (defun zotexo-update-database (&optional check-zotero-change bibfile id)
   "Update the primary BibTeX database associated with the current buffer.
 
@@ -320,7 +352,10 @@ Through error if zotero collection is not found by MozRepl"
         (id (or id
 		(zotexo--get-local-collection-id)))
         (file-name (file-name-nondirectory (file-name-sans-extension (buffer-file-name))))
+        (trans-id (cdr (assoc zotexo-default-translator zotexo-translators)))
         all-colls-p cstr bib-last-change zotero-last-change com1)
+    (unless trans-id
+      (error "Cannot find translator %s in `zotexo-translators' alist" zotexo-default-translator))
     (when (null bibfile)
       (setq file-name (concat file-name "_zotexo_.bib"))
       (setq bibfile (concat default-directory file-name ))
@@ -346,7 +381,7 @@ Through error if zotero collection is not found by MozRepl"
                (or (null check-zotero-change)
                    (null bib-last-change)
                    (time-less-p bib-last-change zotero-last-change)))
-      (setq cstr (format zotexo--export-collection-js bibfile id zotexo-translator-id))
+      (setq cstr (format zotexo--export-collection-js bibfile id trans-id))
       (zotexo--message (format "Executing command: \n\n (moz-command (format zotexo--export-collection-js '%s' %s))\n\n translated as:\n %s\n"
 			       bibfile id cstr))
       (message "Updating '%s' ..." (file-name-nondirectory bibfile))
@@ -357,7 +392,7 @@ Through error if zotero collection is not found by MozRepl"
 	(with-current-buffer (moz-command com1)
 	  (goto-char (point-min))
 	  (unless (re-search-forward ":MozOK:" nil t)
-	    (error "MozError (Firefox running?, MozRepl started?): \n%s" (buffer-substring-no-properties (point) (point-max))))
+	    (error "MozError: \n%s" (buffer-substring-no-properties (point) (point-max))))
           ))
       (message "'%s' updated successfully" (file-name-nondirectory bibfile))
       id)
@@ -506,8 +541,7 @@ started, otherwise you will start getting error screens. "
   "Read a choice from zotero collections via Ido."
   (let (reset-ido)
     (when  (and (require 'ido)
-		(not ido-mode)
-		zotexo-use-ido)
+		(not ido-mode))
       ;; ido initialization
       (setq reset-ido t)
       (ido-init-completion-maps)
@@ -515,7 +549,7 @@ started, otherwise you will start getting error screens. "
       (add-hook 'choose-completion-string-functions 'ido-choose-completion-string)
       (add-hook 'kill-emacs-hook 'ido-kill-emacs-hook))
     (unwind-protect
-	(ido-completing-read (or prompt "Collection : ") collections
+	(ido-completing-read (or prompt "Collection: ") collections
 			     nil t nil nil)
       (when reset-ido
 	(remove-hook 'minibuffer-setup-hook 'ido-minibuffer-setup)
