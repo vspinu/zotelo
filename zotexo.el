@@ -72,6 +72,16 @@ If nil the only updated files are those with non-nil file local
 variable `zotexo-auto-update'. See
 `zotexo-mark-for-auto-update'. ")
 
+(defgroup Zotexo nil "Customization for Zotexo")
+
+(defcustom zotexo-translator-id "9cb70025-a888-4a29-a210-93ec52da40d4"
+  "The id of the zotero-translator to use
+
+standard BibTeX: '9cb70025-a888-4a29-a210-93ec52da40d4'
+BibLaTeX (downloaded from https://code.google.com/p/zotero-biblatex-export/): 'ba4cd274-f24e-42cf-8ff2-ccfc603aacf3'"
+  :type '(string)
+  :group 'Zotexo)
+
 (defvar zotexo--get-zotero-database-js
   "var zotexo_zotero = Components.classes['@zotero.org/Zotero;1'].getService(Components.interfaces.nsISupports).wrappedJSObject;
 zotexo_zotero.getZoteroDatabase().path;")
@@ -129,6 +139,7 @@ zotexo_zotero.getStorageDirectory().path;")
   "
 var zotexo_filename=('%s');
 var zotexo_id = %s;
+var zotexo_translator_id = '%s';
 var zotexo_prefs = Components.classes['@mozilla.org/preferences-service;1'].getService(Components.interfaces.nsIPrefService).getBranch('extensions.zotero.');
 var zotexo_file = Components.classes['@mozilla.org/file/local;1'].createInstance(Components.interfaces.nsILocalFile);
 var zotexo_recColl = zotexo_prefs.getBoolPref('recursiveCollections');
@@ -144,7 +155,7 @@ if (zotexo_id != 0){ //not all collections
 //split
 if(zotexo_collection){
     zotexo_translator.setLocation(zotexo_file);
-    zotexo_translator.setTranslator('9cb70025-a888-4a29-a210-93ec52da40d4');
+    zotexo_translator.setTranslator(zotexo_translator_id);
     zotexo_prefs.setBoolPref('recursiveCollections', true);
     zotexo_translator.translate();
     zotexo_prefs.setBoolPref('recursiveCollections', zotexo_recColl);
@@ -335,7 +346,7 @@ Through error if zotero collection is not found by MozRepl"
                (or (null check-zotero-change)
                    (null bib-last-change)
                    (time-less-p bib-last-change zotero-last-change)))
-      (setq cstr (format zotexo--export-collection-js bibfile id))
+      (setq cstr (format zotexo--export-collection-js bibfile id zotexo-translator-id))
       (zotexo--message (format "Executing command: \n\n (moz-command (format zotexo--export-collection-js '%s' %s))\n\n translated as:\n %s\n"
 			       bibfile id cstr))
       (message "Updating '%s' ..." (file-name-nondirectory bibfile))
