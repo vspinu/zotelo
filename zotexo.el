@@ -39,7 +39,7 @@
 ;;;; Code:
 
 ;; (require 'moz)
-(require 'reftex)
+;; (require 'reftex)
 
 (defvar zotexo-minor-mode-map
   (let ((map (make-sparse-keymap)))
@@ -399,45 +399,30 @@ Through error if zotero collection is not found by MozRepl"
     )
   )
 
-(defun zotexo--locate-bibliography-files (master-dir)
+(defcustom zotexo-bibliography-commands '("bibliography" "nobibliography" "zotexo")
+  "List of commands which specify databases to use.
+
+For example \\bibliography{file1,file2} or \\zotexo{file1,file2}
+both specify that file1 is a primary database and file2 is the
+secondary one. 
+")
+  
+
+(defun zotexo--locate-bibliography-files ()
   ;; Scan buffer for bibliography macro and return as a list.
   ;; Modeled after the corresponding reftex function
 
-  (let ((files
-         (save-excursion
-           (goto-char (point-max))
-           (if (re-search-backward
-                (concat
+  (save-excursion
+    (goto-char (point-max))
+    (if (re-search-backward
+         (concat
                                         ;           "\\(\\`\\|[\n\r]\\)[^%]*\\\\\\("
-                 "\\(^\\)[^%\n\r]*\\\\\\("
-                 (mapconcat 'identity reftex-bibliography-commands "\\|")
-                 "\\){[ \t]*\\([^}]+\\)") nil t)
-               (setq files
-                     (split-string (reftex-match-string 3)
-                                   "[ \t\n\r]*,[ \t\n\r]*"))))))
-    (when files
-      (setq files
-            (mapcar
-             (lambda (x)
-               (if (or (member x reftex-bibfile-ignore-list)
-                       (delq nil (mapcar (lambda (re) (string-match re x))
-                                         reftex-bibfile-ignore-regexps)))
-                   ;; excluded file
-                   nil
-                 ;; find the file
-		 (let* ((file (expand-file-name
-			       (or  (reftex-locate-file x "bib" master-dir)
-				    x)
-			       master-dir))
-			(ext (file-name-extension file)))
-		   (if (and  ext
-			     (string= ext "bib"))
-		       file
-		     (concat file ".bib"))
-		   )))
-	     files))
-      (delq nil files))
-    ))
+          "\\(^\\)[^%\n\r]*\\\\\\("
+          (mapconcat 'identity zotexo-bibliography-commands "\\|")
+          "\\){[ \t]*\\([^}]+\\)") nil t)
+        (split-string   (when (match-beginning 3)
+                          (buffer-substring-no-properties (match-beginning 3) (match-end 3)))
+                        "[ \t\n\r]*,[ \t\n\r]*"))))
 
 
 (defun zotexo-set-collection (&optional prompt no-update no-file-local)
