@@ -8,7 +8,7 @@ Installation
 
 Download [zotelo.el](https://raw.github.com/vitoshka/zotelo/master/zotelo.el) and put it into your emacs path. Install [MozRepl](https://addons.mozilla.org/en-US/firefox/addon/mozrepl/) extension for Firefox and start it (you can also configure it for  auto-start).
 
-Though `zotelo` doesn't rely on [RefTex](http://www.gnu.org/software/auctex/reftex.html), you would really want to have it when working with `BibTeX`. `RefTeX` comes with [AucTeX](http://www.gnu.org/s/auctex/). 
+Though `zotelo` doesn't depend on [RefTex](http://www.gnu.org/software/auctex/reftex.html), you would really want it when working with `BibTeX`. `RefTeX` comes with [AucTeX](http://www.gnu.org/s/auctex/). 
 
 Activate `zotelo-minor-mode` in `latex-mode`:
 

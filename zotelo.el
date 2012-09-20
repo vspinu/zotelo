@@ -1,6 +1,6 @@
 ;; zotelo.el --- synchronize zotero collections in emacs.
 ;;
-;; Filename: zotero.el
+;; Filename: zotelo.el
 ;; Author: Spinu Vitalie
 ;; Maintainer: Spinu Vitalie
 ;; Copyright (C) 2011-2011, Spinu Vitalie, all rights reserved.
