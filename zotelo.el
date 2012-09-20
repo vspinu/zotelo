@@ -1,12 +1,13 @@
-;; zotexo.el --- synchronize zotero collections in emacs.
+;; zotelo.el --- synchronize zotero collections in emacs.
 ;;
 ;; Filename: zotero.el
 ;; Author: Spinu Vitalie
 ;; Maintainer: Spinu Vitalie
 ;; Copyright (C) 2011-2011, Spinu Vitalie, all rights reserved.
 ;; Created: Oct 2 2011
-;; URL: http://code.google.com/p/zotexo/
-;; Keywords: zotero, emacs, reftex, bibtex, MozRepl
+;; Version: 1.0
+;; URL: https://github.com/vitoshka/zotelo
+;; Keywords: zotero, emacs, reftex, bibtex, MozRepl, bibliography manager
 ;;
 ;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;
@@ -32,62 +33,56 @@
 ;;
 ;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;; Commentary:
-;; See http://code.google.com/p/zotexo/ and `zotexo-minor-mode' for more info.
+;; See https://github.com/vitoshka/zotelo.
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;
-;;;; Change log:
-;;;; Code:
 
-;; (require 'moz)
-;; (require 'reftex)
-
-(defvar zotexo-minor-mode-map
+(defvar zotelo-minor-mode-map
   (let ((map (make-sparse-keymap)))
-    (define-key map "\C-czu" 'zotexo-update-database)
-    (define-key map "\C-cze" 'zotexo-export-secondary)
-    (define-key map "\C-czs" 'zotexo-set-collection)
-    (define-key map "\C-czc" 'zotexo-set-collection)
-    (define-key map "\C-czm" 'zotexo-mark-for-auto-update)
-    (define-key map "\C-czr" 'zotexo-reset)
-    (define-key map "\C-czt" 'zotexo-set-translator)
-    (define-key map "\C-czT" 'zotexo-toggle-auto-update)
+    (define-key map "\C-czu" 'zotelo-update-database)
+    (define-key map "\C-cze" 'zotelo-export-secondary)
+    (define-key map "\C-czs" 'zotelo-set-collection)
+    (define-key map "\C-czc" 'zotelo-set-collection)
+    (define-key map "\C-czm" 'zotelo-mark-for-auto-update)
+    (define-key map "\C-czr" 'zotelo-reset)
+    (define-key map "\C-czt" 'zotelo-set-translator)
+    (define-key map "\C-czT" 'zotelo-toggle-auto-update)
     map))
 
-(defvar zotexo--check-timer nil
-  "Global timer executed at `zotexo-check-interval' seconds. ")
+(defvar zotelo--check-timer nil
+  "Global timer executed at `zotelo-check-interval' seconds. ")
 
-(defvar zotexo-check-interval 5
+(defvar zotelo-check-interval 5
   "Seconds between checks for zotero database changes.
-Note that zotexo uses idle timer. Yeach time emacs is idle for
-this number of seconds zotexo checks for an update.")
+Note that zotelo uses idle timer. Yeach time emacs is idle for
+this number of seconds zotelo checks for an update.")
 
-;; (defvar zotexo-use-ido t
+;; (defvar zotelo-use-ido t
 ;;   "If t will try to use ido interface")
 
-(defvar zotexo-auto-update-all nil
-  "If t zotexo checks for the change in zotero database
-every `zotexo-check-interval' seconds and auto updates all
-buffers with active `zotexo-minor-mode'.
+(defvar zotelo-auto-update-all nil
+  "If t zotelo checks for the change in zotero database
+every `zotelo-check-interval' seconds and auto updates all
+buffers with active `zotelo-minor-mode'.
 
 If nil the only updated files are those with non-nil file local
-variable `zotexo-auto-update'. See
-`zotexo-mark-for-auto-update'. ")
+variable `zotelo-auto-update'. See
+`zotelo-mark-for-auto-update'. ")
 
-(defgroup zotexo nil "Customization for Zotexo"
+(defgroup zotelo nil "Customization for zotelo"
   :group 'convenience)
 
-(defcustom zotexo-default-translator 'BibTeX
+(defcustom zotelo-default-translator 'BibTeX
   "The name of the default zotero-translator to use (a symbol).
 
-Must correspond to one of the keys in `zotexo-translators' alist.
+Must correspond to one of the keys in `zotelo-translators' alist.
 
 You can set this varialbe interactively with
-`zotexo-set-translator'.
+`zotelo-set-translator'.
 "
   :type 'symbol
-  :group 'zotexo)
+  :group 'zotelo)
 
-(defcustom zotexo-translators
+(defcustom zotelo-translators
   '((BibTeX "9cb70025-a888-4a29-a210-93ec52da40d4" "bib")
     (BibLaTeX "ba4cd274-f24e-42cf-8ff2-ccfc603aacf3" "bib")
     (BibLaTeX-cite "fe7a85a9-4cb5-4986-9cc3-e6b47d6660f7" "bib")
@@ -110,41 +105,41 @@ translators. You have to search and download them yourself.
 Standard BibTeX (zotero): '9cb70025-a888-4a29-a210-93ec52da40d4'
 BibLaTeX (downloaded from https://code.google.com/p/zotero-biblatex-export/): 'ba4cd274-f24e-42cf-8ff2-ccfc603aacf3'
 "
-  :group 'zotexo
+  :group 'zotelo
   :type 'alist
 )
 
-(defvar zotexo--get-zotero-database-js
-  "var zotexo_zotero = Components.classes['@zotero.org/Zotero;1'].getService(Components.interfaces.nsISupports).wrappedJSObject;
-zotexo_zotero.getZoteroDatabase().path;")
+(defvar zotelo--get-zotero-database-js
+  "var zotelo_zotero = Components.classes['@zotero.org/Zotero;1'].getService(Components.interfaces.nsISupports).wrappedJSObject;
+zotelo_zotero.getZoteroDatabase().path;")
 
-(defvar zotexo--get-zotero-storage-js
-  "var zotexo_zotero = Components.classes['@zotero.org/Zotero;1'].getService(Components.interfaces.nsISupports).wrappedJSObject;
-zotexo_zotero.getStorageDirectory().path;")
+(defvar zotelo--get-zotero-storage-js
+  "var zotelo_zotero = Components.classes['@zotero.org/Zotero;1'].getService(Components.interfaces.nsISupports).wrappedJSObject;
+zotelo_zotero.getStorageDirectory().path;")
 
-(defvar zotexo--auto-update-is-on nil
-  "If t zotexo monitors changes in zotero database and reexports
+(defvar zotelo--auto-update-is-on nil
+  "If t zotelo monitors changes in zotero database and reexports
   collections if needed.
   You can toggle it with  'C-c z T'
 ")
 
-(defvar zotexo--ignore-files (list "_region_.tex"))
+(defvar zotelo--ignore-files (list "_region_.tex"))
 
 
-(defvar zotexo--verbose nil)
-(defun zotexo-verbose ()
-  "Toggle zotexo debug messages (all printed in *message* buffer)"
+(defvar zotelo--verbose nil)
+(defun zotelo-verbose ()
+  "Toggle zotelo debug messages (all printed in *message* buffer)"
   (interactive)
-  (message "zotexo verbose '%s'" (setq zotexo--verbose (not zotexo--verbose))))
+  (message "zotelo verbose '%s'" (setq zotelo--verbose (not zotelo--verbose))))
 
-(defun zotexo--message (str)
-  (when zotexo--verbose
+(defun zotelo--message (str)
+  (when zotelo--verbose
     (with-current-buffer "*Messages*"
       (goto-char (point-max))
-      (insert (format "\n zotexo message [%s]\n %s\n" (current-time-string) str)))))
+      (insert (format "\n zotelo message [%s]\n %s\n" (current-time-string) str)))))
 
-(defvar zotexo--render-collection-js
-  "var zotexo_render_collection = function() {
+(defvar zotelo--render-collection-js
+  "var zotelo_render_collection = function() {
     var R=%s;
     var Zotero = Components.classes['@zotero.org/Zotero;1'].getService(Components.interfaces.nsISupports).wrappedJSObject;
     var print_names = function(collections, prefix){
@@ -167,62 +162,62 @@ zotexo_zotero.getStorageDirectory().path;")
 ;;;; moz-repl splits long commands. Need to send it partially, but then errors
 ;;;; in first parts are not visible ... :(
 ;;;; todo: insert the check dirrectly in moz-command ??? 
-(defvar zotexo--export-collection-js
+(defvar zotelo--export-collection-js
   "
-var zotexo_filename=('%s');
-var zotexo_id = %s;
-var zotexo_translator_id = '%s';
-var zotexo_prefs = Components.classes['@mozilla.org/preferences-service;1'].getService(Components.interfaces.nsIPrefService).getBranch('extensions.zotero.');
-var zotexo_file = Components.classes['@mozilla.org/file/local;1'].createInstance(Components.interfaces.nsILocalFile);
-var zotexo_recColl = zotexo_prefs.getBoolPref('recursiveCollections');
-zotexo_file.initWithPath(zotexo_filename);
+var zotelo_filename=('%s');
+var zotelo_id = %s;
+var zotelo_translator_id = '%s';
+var zotelo_prefs = Components.classes['@mozilla.org/preferences-service;1'].getService(Components.interfaces.nsIPrefService).getBranch('extensions.zotero.');
+var zotelo_file = Components.classes['@mozilla.org/file/local;1'].createInstance(Components.interfaces.nsILocalFile);
+var zotelo_recColl = zotelo_prefs.getBoolPref('recursiveCollections');
+zotelo_file.initWithPath(zotelo_filename);
 //split
-var zotexo_zotero = Components.classes['@zotero.org/Zotero;1'].getService(Components.interfaces.nsISupports).wrappedJSObject;
-var zotexo_collection = true;
-var zotexo_translator = new zotexo_zotero.Translate('export');
-if (zotexo_id != 0){ //not all collections
-    zotexo_collection = zotexo_zotero.Collections.get(zotexo_id);
-    zotexo_translator.setCollection(zotexo_collection);
+var zotelo_zotero = Components.classes['@zotero.org/Zotero;1'].getService(Components.interfaces.nsISupports).wrappedJSObject;
+var zotelo_collection = true;
+var zotelo_translator = new zotelo_zotero.Translate('export');
+if (zotelo_id != 0){ //not all collections
+    zotelo_collection = zotelo_zotero.Collections.get(zotelo_id);
+    zotelo_translator.setCollection(zotelo_collection);
 };
 //split
-if(zotexo_collection){
-    zotexo_translator.setLocation(zotexo_file);
-    zotexo_translator.setTranslator(zotexo_translator_id);
-    zotexo_prefs.setBoolPref('recursiveCollections', true);
-    zotexo_translator.translate();
-    zotexo_prefs.setBoolPref('recursiveCollections', zotexo_recColl);
-    zotexo_out=':MozOK:';
+if(zotelo_collection){
+    zotelo_translator.setLocation(zotelo_file);
+    zotelo_translator.setTranslator(zotelo_translator_id);
+    zotelo_prefs.setBoolPref('recursiveCollections', true);
+    zotelo_translator.translate();
+    zotelo_prefs.setBoolPref('recursiveCollections', zotelo_recColl);
+    zotelo_out=':MozOK:';
 }else{
-    zotexo_out='Collection with the id ' + zotexo_id + ' does not exist.';
+    zotelo_out='Collection with the id ' + zotelo_id + ' does not exist.';
 };
 //split
-zotexo_out;
+zotelo_out;
 "
   "Command to be sent to zotero request export."
   )
 
-(defvar zotexo--dateModified-js
-  "var zotexo_zotero = Components.classes['@zotero.org/Zotero;1'].getService(Components.interfaces.nsISupports).wrappedJSObject;
-var zotexo_id = %s;
-var zotexo_collection = zotexo_zotero.Collections.get(zotexo_id);
-if(zotexo_collection){
-   ':MozOK:' + zotexo_collection.dateModified;
+(defvar zotelo--dateModified-js
+  "var zotelo_zotero = Components.classes['@zotero.org/Zotero;1'].getService(Components.interfaces.nsISupports).wrappedJSObject;
+var zotelo_id = %s;
+var zotelo_collection = zotelo_zotero.Collections.get(zotelo_id);
+if(zotelo_collection){
+   ':MozOK:' + zotelo_collection.dateModified;
 }else{
-   'Collection with the id ' + zotexo_id + ' does not exist.';
+   'Collection with the id ' + zotelo_id + ' does not exist.';
 }"
 
   "Command to get last modification date of the collection.")
 
-(define-minor-mode zotexo-minor-mode
-  "zotexo minor mode for interaction with Firefox.
+(define-minor-mode zotelo-minor-mode
+  "zotelo minor mode for interaction with Firefox.
 With no argument, this command toggles the mode.
 Non-null prefix argument turns on the mode.
 Null prefix argument turns off the mode.
 
-When this minor mode is enabled, `zotexo-set-collection' prompts
+When this minor mode is enabled, `zotelo-set-collection' prompts
 for zotero collection and stores it as file local variable . To
 manually update the BibTeX data base call
-`zotexo-update-database'. The \"file_name.bib\" file will be
+`zotelo-update-database'. The \"file_name.bib\" file will be
 created with the exported zotero items. To specify the file_name
 just insert insert \\bibliography{file_name} anywhere in the
 buffer.
@@ -233,62 +228,62 @@ such as org-mode.
 
 The following keys are bound in this minor mode:
 
-\\{zotexo-minor-mode-map}"
+\\{zotelo-minor-mode-map}"
   nil
-  (zotexo--auto-update-is-on " ZX" " zx")
-  :keymap zotexo-minor-mode-map
-  :group 'zotexo
-  (if zotexo-minor-mode
+  (zotelo--auto-update-is-on " ZX" " zx")
+  :keymap zotelo-minor-mode-map
+  :group 'zotelo
+  (if zotelo-minor-mode
       (progn
-        (unless (timerp zotexo--check-timer)
-          (setq zotexo--check-timer
-                (run-with-idle-timer 5 zotexo-check-interval 'zotexo--check-and-update-all)))
+        (unless (timerp zotelo--check-timer)
+          (setq zotelo--check-timer
+                (run-with-idle-timer 5 zotelo-check-interval 'zotelo--check-and-update-all)))
         )
     (unless
         (loop for b in (buffer-list)
-              for is-zotexo-mode = (buffer-local-value 'zotexo-minor-mode b)
-              until is-zotexo-mode
-              finally return is-zotexo-mode)
-      ;; if no more active zotexo mode, cancel the timer and kill the process
-      (when (timerp zotexo--check-timer)
-        (cancel-timer zotexo--check-timer)
-        (setq zotexo--check-timer nil)
-        (delete-process (zotexo--moz-process))
-        (kill-buffer zotexo--moz-buffer)
+              for is-zotelo-mode = (buffer-local-value 'zotelo-minor-mode b)
+              until is-zotelo-mode
+              finally return is-zotelo-mode)
+      ;; if no more active zotelo mode, cancel the timer and kill the process
+      (when (timerp zotelo--check-timer)
+        (cancel-timer zotelo--check-timer)
+        (setq zotelo--check-timer nil)
+        (delete-process (zotelo--moz-process))
+        (kill-buffer zotelo--moz-buffer)
         )
       )
     )
   )
 
 
-(defun zotexo--check-and-update-all ()
-  "Function run with `zotexo--check-timer'."
-  (when zotexo--auto-update-is-on
+(defun zotelo--check-and-update-all ()
+  "Function run with `zotelo--check-timer'."
+  (when zotelo--auto-update-is-on
     (let ( out id any-z-buffer-p z-buffer-p)
-      (zotexo--message  "Zotexo checking for updates.")
-      (dolist (b  (buffer-list)) ;iterate through zotexo buffers
-        (setq z-buffer-p (buffer-local-value 'zotexo-minor-mode b))
+      (zotelo--message  "zotelo checking for updates.")
+      (dolist (b  (buffer-list)) ;iterate through zotelo buffers
+        (setq z-buffer-p (buffer-local-value 'zotelo-minor-mode b))
         (when z-buffer-p
           (setq any-z-buffer-p t))
         (when (and
-               ;; zotexo buffer?
+               ;; zotelo buffer?
                z-buffer-p
                ;; exclusion reg-exp  matched?,
                (not (delq nil (mapcar (lambda (reg)
                                         (string-match reg (buffer-name b)))
-                                      zotexo--ignore-files)))
+                                      zotelo--ignore-files)))
                ;; collection is set?,
                (assoc 'zotero-collection (buffer-local-value 'file-local-variables-alist b))
                ;; auto-update-all?, auto-update?
                (let ((auto-update
-                      (assoc 'zotexo-auto-update (buffer-local-value 'file-local-variables-alist b))))
-                 (if (and zotexo-auto-update-all (null auto-update))
+                      (assoc 'zotelo-auto-update (buffer-local-value 'file-local-variables-alist b))))
+                 (if (and zotelo-auto-update-all (null auto-update))
                      (setq auto-update '(t . t)))
                  (cdr auto-update))
                )
           (with-current-buffer b
             (ignore-errors
-              (setq id (zotexo-update-database t))))
+              (setq id (zotelo-update-database t))))
           (when id
             (setq out
                   (append (list (buffer-name b)) out))
@@ -296,18 +291,18 @@ The following keys are bound in this minor mode:
       (if (> (length out) 0)
           (message "Bibliography updated in %s buffers: %s." (length out) out))
       (when (and (not any-z-buffer-p)
-                 (timerp zotexo--check-timer))
-        ;; stop timer if no more zotexo buffers
-        (cancel-timer zotexo--check-timer)
-        (setq zotexo--check-timer nil)
-        (delete-process (zotexo--moz-process))
-        (kill-buffer zotexo--moz-buffer)
+                 (timerp zotelo--check-timer))
+        ;; stop timer if no more zotelo buffers
+        (cancel-timer zotelo--check-timer)
+        (setq zotelo--check-timer nil)
+        (delete-process (zotelo--moz-process))
+        (kill-buffer zotelo--moz-buffer)
         )
       )))
 
 
 
-(defun zotexo-export-secondary ()
+(defun zotelo-export-secondary ()
   "Export zotero collection into  secondary BibTeX database.
 
 Before export, ask for a secondary database and zotero collection
@@ -319,36 +314,36 @@ Error ocures if there is only one (primary) file listed in
 
 Error if zotero collection is not found by MozRepl"
   (interactive)
-  (let* ((files (zotexo--locate-bibliography-files))
+  (let* ((files (zotelo--locate-bibliography-files))
 	 (bibfile (cond
 		   ((< (length files) 2)
 		   (error "No secondary databases (\\bibliography{...} lists contain less than 2 files)."))
 		   ((= (length files) 2)
 		    (cadr files))
-		   (t (zotexo--read (cdr files) "File to update: "))))
-	 (collection (zotexo-set-collection
+		   (t (zotelo--read (cdr files) "File to update: "))))
+	 (collection (zotelo-set-collection
 		      (format "Export into '%s': " (file-name-nondirectory bibfile))
 		      'no-update 'no-set)))
-    (zotexo-update-database nil bibfile (get-text-property 0 'zotero-id collection))))
+    (zotelo-update-database nil bibfile (get-text-property 0 'zotero-id collection))))
   
 
-(defun zotexo-set-translator ()
-  "Ask to choose from available translators and set `zotexo-default-translator'."
+(defun zotelo-set-translator ()
+  "Ask to choose from available translators and set `zotelo-default-translator'."
   (interactive)
   (let ((tnames (mapcar (lambda (el) (symbol-name (car el)))
-                        zotexo-translators)))
-    (setq zotexo-default-translator
-          (intern (zotexo--read tnames "Choose translator: "
-                                (symbol-name zotexo-default-translator))))))
+                        zotelo-translators)))
+    (setq zotelo-default-translator
+          (intern (zotelo--read tnames "Choose translator: "
+                                (symbol-name zotelo-default-translator))))))
       
   
 
-(defun zotexo-update-database (&optional check-zotero-change bibfile id)
+(defun zotelo-update-database (&optional check-zotero-change bibfile id)
   "Update the primary BibTeX database associated with the current buffer.
 
 Primary database is the first file in \\bibliography{file1, file2,
 ...}, list. If you want to export into a different file use
-`zotexo-update-database-secondary'.
+`zotelo-update-database-secondary'.
 
 If BIBFILE is supplied, don't infer from \\bibliography{...} statement.
 
@@ -357,20 +352,20 @@ If ID is supplied, don't infer collection id from file local variables.
 Through an error if zotero collection has not been found by MozRepl"
   (interactive)
   (let ((bibfile (or bibfile
-		     (car (zotexo--locate-bibliography-files))))
-        (proc  (zotexo--moz-process))
+		     (car (zotelo--locate-bibliography-files))))
+        (proc  (zotelo--moz-process))
         (id (or id
-		(zotexo--get-local-collection-id)))
+		(zotelo--get-local-collection-id)))
         (file-name (file-name-nondirectory (file-name-sans-extension (buffer-file-name))))
-        (translator (assoc zotexo-default-translator zotexo-translators))
+        (translator (assoc zotelo-default-translator zotelo-translators))
         all-colls-p cstr bib-last-change zotero-last-change com1)
     (unless translator
-      (error "Cannot find translator %s in `zotexo-translators' alist" zotexo-default-translator))
+      (error "Cannot find translator %s in `zotelo-translators' alist" zotelo-default-translator))
     
     (unless bibfile
       ;; (setq file-name (concat file-name "."))
       (setq bibfile file-name)
-      (message "Using '%s' filename for %s export." file-name zotexo-default-translator)
+      (message "Using '%s' filename for %s export." file-name zotelo-default-translator)
       )
     
     (setq bibfile (concat (expand-file-name bibfile) "." (nth 2 translator)))
@@ -378,14 +373,14 @@ Through an error if zotero collection has not been found by MozRepl"
     (setq bibfile (replace-regexp-in-string "\\\\" "\\\\"
 					    (convert-standard-filename bibfile) nil 'literal))
     (when (and (called-interactively-p) (null id))
-      (zotexo-set-collection "Zotero collection is not set. Choose one: " 'no-update)
-      (setq id (zotexo--get-local-collection-id)))
+      (zotelo-set-collection "Zotero collection is not set. Choose one: " 'no-update)
+      (setq id (zotelo--get-local-collection-id)))
     
     (unless (file-exists-p (file-name-directory bibfile))
       (error "Directory '%s' does not exist; create it first." (file-name-directory bibfile)))
     (when check-zotero-change
       (set-time-zone-rule t)
-      (with-current-buffer (moz-command (format zotexo--dateModified-js id))
+      (with-current-buffer (moz-command (format zotelo--dateModified-js id))
         (goto-char (point-min))
         (when (re-search-forward ":MozOK:" nil t) ;; ingore the error it is  cought latter
           (setq zotero-last-change (date-to-time
@@ -395,8 +390,8 @@ Through an error if zotero collection has not been found by MozRepl"
                (or (null check-zotero-change)
                    (null bib-last-change)
                    (time-less-p bib-last-change zotero-last-change)))
-      (setq cstr (format zotexo--export-collection-js bibfile id (cadr translator)))
-      (zotexo--message (format "Executing command: \n\n (moz-command (format zotexo--export-collection-js '%s' %s))\n\n translated as:\n %s\n"
+      (setq cstr (format zotelo--export-collection-js bibfile id (cadr translator)))
+      (zotelo--message (format "Executing command: \n\n (moz-command (format zotelo--export-collection-js '%s' %s))\n\n translated as:\n %s\n"
 			       bibfile id cstr))
       (message "Updating '%s' ..." (file-name-nondirectory bibfile))
       (setq com (split-string cstr "//split" t))
@@ -413,16 +408,16 @@ Through an error if zotero collection has not been found by MozRepl"
     )
   )
 
-(defcustom zotexo-bibliography-commands '("bibliography" "nobibliography" "zotexo")
+(defcustom zotelo-bibliography-commands '("bibliography" "nobibliography" "zotelo")
   "List of commands which specify databases to use.
 
-For example \\bibliography{file1,file2} or \\zotexo{file1,file2}
+For example \\bibliography{file1,file2} or \\zotelo{file1,file2}
 both specify that file1 is a primary database and file2 is the
 secondary one. 
 ")
   
 
-(defun zotexo--locate-bibliography-files ()
+(defun zotelo--locate-bibliography-files ()
   ;; Scan buffer for bibliography macro and return as a list.
   ;; Modeled after the corresponding reftex function
 
@@ -432,16 +427,16 @@ secondary one.
          (concat
                                         ;           "\\(\\`\\|[\n\r]\\)[^%]*\\\\\\("
           "\\(^\\)[^%\n\r]*\\\\\\("
-          (mapconcat 'identity zotexo-bibliography-commands "\\|")
+          (mapconcat 'identity zotelo-bibliography-commands "\\|")
           "\\){[ \t]*\\([^}]+\\)") nil t)
         (split-string   (when (match-beginning 3)
                           (buffer-substring-no-properties (match-beginning 3) (match-end 3)))
                         "[ \t\n\r]*,[ \t\n\r]*"))))
 
 
-(defun zotexo-set-collection (&optional prompt no-update no-file-local)
+(defun zotelo-set-collection (&optional prompt no-update no-file-local)
   "Ask for a zotero collection.
-Ido interface is used by default. If you don't like it set `zotexo-use-ido' to nil.
+Ido interface is used by default. If you don't like it set `zotelo-use-ido' to nil.
 
 
 In `ido-mode' use \"C-s\" and \"C-r\" for navigation. See
@@ -457,12 +452,12 @@ Return the properized collection name.
   (let ((buf (get-buffer-create "*moz-command-output*"))
 	colls name id)
     ;; set up the collection list
-    (moz-command (format zotexo--render-collection-js
-			 (process-get (zotexo--moz-process) 'moz-prompt)))
-    (moz-command "zotexo_render_collection()" buf)
+    (moz-command (format zotelo--render-collection-js
+			 (process-get (zotelo--moz-process) 'moz-prompt)))
+    (moz-command "zotelo_render_collection()" buf)
     (with-current-buffer buf
       (goto-char (point-min))
-      (zotexo--message (format "Collections:\n %s" 
+      (zotelo--message (format "Collections:\n %s" 
 			       (buffer-substring-no-properties (point-min) (min 500 (point-max)))))
       (while (re-search-forward "^\\([0-9]+\\) /\\(.*\\)$" nil t)
 	(setq id (match-string-no-properties 1)
@@ -474,7 +469,7 @@ Return the properized collection name.
     (if (null colls)
 	(error "No collections found or error occured see *moz-command-output* buffer for clues.")
       ;; (setq colls (mapcar 'remove-text-properties colls))
-      (setq name (zotexo--read (cons (propertize "*ALL*" 'zotero-id "0") (nreverse colls))
+      (setq name (zotelo--read (cons (propertize "*ALL*" 'zotero-id "0") (nreverse colls))
 			       prompt))
       (unless no-file-local
 	(save-excursion
@@ -483,21 +478,21 @@ Return the properized collection name.
 					       'name (substring-no-properties name)))
 	  (hack-local-variables))
 	(unless no-update
-	  (zotexo-update-database)))
+	  (zotelo-update-database)))
       name
       )))
 
 
 
-(defun zotexo-mark-for-auto-update (&optional unmark)
+(defun zotelo-mark-for-auto-update (&optional unmark)
   "Mark current file for auto-update.
 
-If the file is marked for auto-update zotexo runs
-`zotexo-update-database' on it whenever the zotero data-base is
+If the file is marked for auto-update zotelo runs
+`zotelo-update-database' on it whenever the zotero data-base is
 updated.
 
 File is marked by adding file local variable
-'zotexo-auto-update'. To un-mark the file call this function with
+'zotelo-auto-update'. To un-mark the file call this function with
 an argument or just delete or set to nil the local variable at
 the end of the file.
 "
@@ -505,38 +500,38 @@ the end of the file.
   (save-excursion
     (if unmark
         (progn
-          (delete-file-local-variable 'zotexo-auto-update)
+          (delete-file-local-variable 'zotelo-auto-update)
           (setq file-local-variables-alist
-                (assq-delete-all 'zotexo-auto-update file-local-variables-alist)))
-      (add-file-local-variable 'zotexo-auto-update t)
+                (assq-delete-all 'zotelo-auto-update file-local-variables-alist)))
+      (add-file-local-variable 'zotelo-auto-update t)
       (hack-local-variables)
       )
     )
   )
 
 
-(defun zotexo-reset ()
-  "Reset zotexo."
+(defun zotelo-reset ()
+  "Reset zotelo."
   (interactive)
-  (delete-process (zotexo--moz-process))
-  (kill-buffer zotexo--moz-buffer)
+  (delete-process (zotelo--moz-process))
+  (kill-buffer zotelo--moz-buffer)
   (message "Killed moz process")
   )
 
 
-(defun zotexo-toggle-auto-update ()
+(defun zotelo-toggle-auto-update ()
   "Togles auto-updating in all buffers.
 Note that once toggled in your firefox and MozRepl must be
 started, otherwise you will start getting error screens. "
   (interactive)
-  (setq zotexo--auto-update-is-on (not zotexo--auto-update-is-on))
+  (setq zotelo--auto-update-is-on (not zotelo--auto-update-is-on))
   )
 
 
-(defun zotexo--get-local-collection-id ()
+(defun zotelo--get-local-collection-id ()
   (cdr (assoc 'zotero-collection file-local-variables-alist)))
 
-(defun zotexo--read (collections &optional prompt default)
+(defun zotelo--read (collections &optional prompt default)
   "Read a choice from zotero collections via Ido."
   (let (reset-ido)
     (when  (and (require 'ido)
@@ -561,37 +556,37 @@ started, otherwise you will start getting error screens. "
 
 ;;;; Moz utilities
 
-(defvar zotexo--moz-host "localhost")
-(defvar zotexo--moz-port 4242)
-(defvar zotexo--moz-buffer nil)
-(defvar zotexo--startup-error-count 0)
-(defvar zotexo--max-errors 10)
+(defvar zotelo--moz-host "localhost")
+(defvar zotelo--moz-port 4242)
+(defvar zotelo--moz-buffer nil)
+(defvar zotelo--startup-error-count 0)
+(defvar zotelo--max-errors 10)
 
-(defun zotexo--moz-process ()
+(defun zotelo--moz-process ()
   "Return inferior MozRepl process.  Start it if necessary."
-  (or (if (buffer-live-p zotexo--moz-buffer)
-          (get-buffer-process zotexo--moz-buffer))
+  (or (if (buffer-live-p zotelo--moz-buffer)
+          (get-buffer-process zotelo--moz-buffer))
       (progn
-        (zotexo--moz-start-process)
-        (zotexo--moz-process))))
+        (zotelo--moz-start-process)
+        (zotelo--moz-process))))
 
-(defun zotexo--moz-start-process ()
+(defun zotelo--moz-start-process ()
   "Start mozrepl process and connect to Firefox.
 Note that you have to start the MozRepl server from Firefox."
   (interactive)
-  (setq zotexo--moz-buffer (get-buffer-create "*ZotexoMozRepl*"))
+  (setq zotelo--moz-buffer (get-buffer-create "*zoteloMozRepl*"))
   (condition-case err
-      (let ((proc (make-network-process :name "ZotexoMozRepl" :buffer zotexo--moz-buffer
-					:host zotexo--moz-host :service zotexo--moz-port
+      (let ((proc (make-network-process :name "zoteloMozRepl" :buffer zotelo--moz-buffer
+					:host zotelo--moz-host :service zotelo--moz-port
 					:filter 'moz-ordinary-insertion-filter)))
         (sleep-for 0 100)
 	(set-process-query-on-exit-flag proc nil)
-        (with-current-buffer zotexo--moz-buffer
+        (with-current-buffer zotelo--moz-buffer
           (set-marker (process-mark proc) (point-max)))
-        (setq zotexo--startup-error-count 0))
+        (setq zotelo--startup-error-count 0))
     (file-error
      (let ((buf (get-buffer-create "*MozRepl Error*")))
-       (setq zotexo--startup-error-count (1+ zotexo--startup-error-count))
+       (setq zotelo--startup-error-count (1+ zotelo--startup-error-count))
        (with-current-buffer buf
          (erase-buffer)
          (insert "Can't start MozRepl, the error message was:\n\n     "
@@ -615,18 +610,18 @@ Note that you have to start the MozRepl server from Firefox."
           "\n"
           "\nMozRepl is also available directly from Firefox add-on"
           "\npages, but is updated less frequently there.\n\n"
-          (format "Zotexo Error Count: %s\n\n%s"
-                  zotexo--startup-error-count
-                  (if (not (and (>= zotexo--startup-error-count 10)
-                                zotexo--auto-update-is-on))
-                      "If zotexo auto-update is on, press \"C-c z t\" to turn it off."
-                    (setq zotexo--auto-update-is-on nil)
-                    (setq zotexo--startup-error-count 0)
-                    "Too many errors. Zotexo auto-update was turned off!\nUse [C-c z t] to switch it on.")))
+          (format "zotelo Error Count: %s\n\n%s"
+                  zotelo--startup-error-count
+                  (if (not (and (>= zotelo--startup-error-count 10)
+                                zotelo--auto-update-is-on))
+                      "If zotelo auto-update is on, press \"C-c z t\" to turn it off."
+                    (setq zotelo--auto-update-is-on nil)
+                    (setq zotelo--startup-error-count 0)
+                    "Too many errors. zotelo auto-update was turned off!\nUse [C-c z t] to switch it on.")))
          )
-       (kill-buffer "*ZotexoMozRepl*")
+       (kill-buffer "*zoteloMozRepl*")
        (display-buffer buf t)
-       (error "Zotexo cannot start MozRepl")
+       (error "zotelo cannot start MozRepl")
        ))
     ))
 
@@ -661,7 +656,7 @@ New line is automatically appended.
   (if buf
       (setq buf (get-buffer-create buf))
     (setq buf (get-buffer-create "*moz-command-output*")))
-  (let ((proc (zotexo--moz-process)))
+  (let ((proc (zotelo--moz-process)))
     (save-excursion
       ;; (set-buffer sbuffer)
       (when (process-get proc 'busy)
@@ -688,7 +683,7 @@ New line is automatically appended.
 	      (moz-wait-for-process proc)
 	      ;;(delete-region (point-at-bol) (point-max))
 	      )
-	    (zotexo--message "Moz-command finished"))
+	    (zotelo--message "Moz-command finished"))
 	;; Restore old values for process filter
 	(set-process-buffer proc oldpb)
 	(set-process-filter proc oldpf)
@@ -718,12 +713,12 @@ the prompt check, default 0.01s. "
 ;;       (process-put (get-buffer-process (current-buffer)) 'busy nil)
 ;;     (process-put (get-buffer-process (current-buffer)) 'busy t)))
 
-;; (defun zotexo-insert-busy-hook ()
+;; (defun zotelo-insert-busy-hook ()
 ;;   "Add `inferior-moz-track-proc-busy' to comint-outbut-filter hook "
 ;;   (add-hook 'comint-output-filter-functions 'inferior-moz-track-proc-busy nil t)
 ;;   )
 
-;; (add-hook 'inferior-moz-hook 'zotexo-insert-busy-hook)
+;; (add-hook 'inferior-moz-hook 'zotelo-insert-busy-hook)
 
-(provide 'zotexo)
-;;; zotexo.el ends here.
+(provide 'zotelo)
+;;; zotelo.el ends here.
