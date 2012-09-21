@@ -350,7 +350,8 @@ Error if zotero collection is not found by MozRepl"
                         zotelo-translators)))
     (setq zotelo-default-translator
           (intern (zotelo--read tnames "Choose translator: "
-                                (symbol-name zotelo-default-translator))))))
+                                (symbol-name zotelo-default-translator))))
+    (message "Translator set to %s" zotelo-default-translator)))
 
 
 ;;;###autoload
@@ -419,7 +420,7 @@ Through an error if zotero collection has not been found by MozRepl"
 	  (unless (re-search-forward ":MozOK:" nil t)
 	    (error "MozError: \n%s" (buffer-substring-no-properties (point) (point-max))))
           ))
-      (message "'%s' updated successfully" (file-name-nondirectory bibfile))
+      (message "'%s' updated successfully (%s)" (file-name-nondirectory bibfile) zotelo-default-translator)
       id)
     )
   )
