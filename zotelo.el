@@ -1,11 +1,10 @@
-;; zotelo.el --- Manage Zotero collections from emacs.
+;;; zotelo.el --- Manage Zotero collections from emacs
 ;;
 ;; Filename: zotelo.el
 ;; Author: Spinu Vitalie
 ;; Maintainer: Spinu Vitalie
-;; Copyright (C) 2011-2011, Spinu Vitalie, all rights reserved.
+;; Copyright (C) 2011-2012, Spinu Vitalie, all rights reserved.
 ;; Created: Oct 2 2011
-;; Version: 1.0
 ;; URL: https://github.com/vitoshka/zotelo
 ;; Keywords: zotero, emacs, reftex, bibtex, MozRepl, bibliography manager
 ;;
@@ -28,8 +27,10 @@
 ;; the Free Software Foundation, Inc., 51 Franklin Street, Fifth
 ;; Floor, Boston, MA 02110-1301, USA.
 ;;
+;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;
 ;;; Commentary:
+;;
 ;; Zotelo helps you efficiently export and synchronize local databases (bib,
 ;; rdf, html, json etc) and [Zotero](http://www.zotero.org) collections directly
 ;; from emacs.
@@ -45,6 +46,8 @@
 ;;
 ;;  See https://github.com/vitoshka/zotelo for more.
 ;;
+;;
+;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 ;;;###autoload
 (defvar zotelo-minor-mode-map
