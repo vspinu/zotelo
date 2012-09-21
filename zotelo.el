@@ -5,6 +5,7 @@
 ;; Maintainer: Spinu Vitalie
 ;; Copyright (C) 2011-2012, Spinu Vitalie, all rights reserved.
 ;; Created: Oct 2 2011
+;; Version: 1.2
 ;; URL: https://github.com/vitoshka/zotelo
 ;; Keywords: zotero, emacs, reftex, bibtex, MozRepl, bibliography manager
 ;;
@@ -38,14 +39,13 @@
 ;; Zotelo can be used in conjunction with any emacs mode but is primarily
 ;; intended for bibtex and RefTeX users.
 ;;
+;; zotelo-mode-map lives on  C-c z prefix.
+;;
 ;;   *Instalation*
 ;;
 ;;   (add-hook 'TeX-mode-hook 'zotelo-minor-mode)
 ;;
-;;   This activates zotelo-mode-map on  C-c z
-;;
-;;  See https://github.com/vitoshka/zotelo for more.
-;;
+;;  See https://github.com/vitoshka/zotelo for more
 ;;
 ;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
@@ -122,7 +122,7 @@ BibLaTeX (downloaded from https://code.google.com/p/zotero-biblatex-export/): 'b
 "
   :group 'zotelo
   :type 'alist
-)
+  )
 
 (defvar zotelo--get-zotero-database-js
   "var zotelo_zotero = Components.classes['@zotero.org/Zotero;1'].getService(Components.interfaces.nsISupports).wrappedJSObject;
@@ -303,7 +303,7 @@ The following keys are bound in this minor mode:
           (when id
             (setq out
                   (append (list (buffer-name b)) out))
-          )))
+            )))
       (if (> (length out) 0)
           (message "Bibliography updated in %s buffers: %s." (length out) out))
       (when (and (not any-z-buffer-p)
@@ -333,7 +333,7 @@ Error if zotero collection is not found by MozRepl"
   (let* ((files (zotelo--locate-bibliography-files))
 	 (bibfile (cond
 		   ((< (length files) 2)
-		   (error "No secondary databases (\\bibliography{...} lists contain less than 2 files)."))
+                    (error "No secondary databases (\\bibliography{...} lists contain less than 2 files)."))
 		   ((= (length files) 2)
 		    (cadr files))
 		   (t (zotelo--read (cdr files) "File to update: "))))
@@ -341,7 +341,7 @@ Error if zotero collection is not found by MozRepl"
 		      (format "Export into '%s': " (file-name-nondirectory bibfile))
 		      'no-update 'no-set)))
     (zotelo-update-database nil bibfile (get-text-property 0 'zotero-id collection))))
-  
+
 
 (defun zotelo-set-translator ()
   "Ask to choose from available translators and set `zotelo-default-translator'."
@@ -351,8 +351,8 @@ Error if zotero collection is not found by MozRepl"
     (setq zotelo-default-translator
           (intern (zotelo--read tnames "Choose translator: "
                                 (symbol-name zotelo-default-translator))))))
-      
-  
+
+
 ;;;###autoload
 (defun zotelo-update-database (&optional check-zotero-change bibfile id)
   "Update the primary BibTeX database associated with the current buffer.
@@ -374,7 +374,7 @@ Through an error if zotero collection has not been found by MozRepl"
 		(zotelo--get-local-collection-id)))
         (file-name (file-name-nondirectory (file-name-sans-extension (buffer-file-name))))
         (translator (assoc zotelo-default-translator zotelo-translators))
-        all-colls-p cstr bib-last-change zotero-last-change com1)
+        all-colls-p cstr bib-last-change zotero-last-change com com1)
     (unless translator
       (error "Cannot find translator %s in `zotelo-translators' alist" zotelo-default-translator))
     
@@ -388,7 +388,7 @@ Through an error if zotero collection has not been found by MozRepl"
     (setq bib-last-change (nth 5 (file-attributes bibfile))) ;; nil if bibfile does not exist
     (setq bibfile (replace-regexp-in-string "\\\\" "\\\\"
 					    (convert-standard-filename bibfile) nil 'literal))
-    (when (and (called-interactively-p) (null id))
+    (when (and (called-interactively-p 'any) (null id))
       (zotelo-set-collection "Zotero collection is not set. Choose one: " 'no-update)
       (setq id (zotelo--get-local-collection-id)))
     
@@ -433,7 +433,7 @@ secondary one.
 "
   :group 'zotelo
   :type 'list)
-  
+
 
 (defun zotelo--locate-bibliography-files ()
   ;; Scan buffer for bibliography macro and return as a list.
@@ -675,7 +675,8 @@ New line is automatically appended.
   (if buf
       (setq buf (get-buffer-create buf))
     (setq buf (get-buffer-create "*moz-command-output*")))
-  (let ((proc (zotelo--moz-process)))
+  (let ((proc (zotelo--moz-process))
+        oldpb oldpf oldpm)
     (save-excursion
       ;; (set-buffer sbuffer)
       (when (process-get proc 'busy)
@@ -693,8 +694,7 @@ New line is automatically appended.
 	    (set-process-buffer proc buf)
 	    (set-process-filter proc 'moz-ordinary-insertion-filter)
 	    ;; Output is now going to BUF:
-	    (save-excursion
-	      (set-buffer buf)
+            (with-current-buffer buf
 	      (erase-buffer)
 	      (set-marker (process-mark proc) (point-min))
 	      (process-put proc 'busy t)
