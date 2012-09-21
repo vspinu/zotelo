@@ -49,7 +49,6 @@
 ;;
 ;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-;;;###autoload
 (defvar zotelo-minor-mode-map
   (let ((map (make-sparse-keymap)))
     (define-key map "\C-czu" 'zotelo-update-database)
