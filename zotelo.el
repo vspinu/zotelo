@@ -1,4 +1,4 @@
-;; zotelo.el --- synchronize zotero collections in emacs.
+;; zotelo.el --- Manage Zotero collections from emacs.
 ;;
 ;; Filename: zotelo.el
 ;; Author: Spinu Vitalie
@@ -28,14 +28,25 @@
 ;; the Free Software Foundation, Inc., 51 Franklin Street, Fifth
 ;; Floor, Boston, MA 02110-1301, USA.
 ;;
-;; Features that might be required by this library:
-;; reftex
 ;;
-;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;;; Commentary:
-;; See https://github.com/vitoshka/zotelo.
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;; Commentary:
+;; Zotelo helps you efficiently export and synchronize local databases (bib,
+;; rdf, html, json etc) and [Zotero](http://www.zotero.org) collections directly
+;; from emacs.
+;;
+;; Zotelo can be used in conjunction with any emacs mode but is primarily
+;; intended for bibtex and RefTeX users.
+;;
+;;   *Instalation*
+;;
+;;   (add-hook 'TeX-mode-hook 'zotelo-minor-mode)
+;;
+;;   This activates zotelo-mode-map on  C-c z
+;;
+;;  See https://github.com/vitoshka/zotelo for more.
+;;
 
+;;;###autoload
 (defvar zotelo-minor-mode-map
   (let ((map (make-sparse-keymap)))
     (define-key map "\C-czu" 'zotelo-update-database)
@@ -71,6 +82,7 @@ variable `zotelo-auto-update'. See
 (defgroup zotelo nil "Customization for zotelo"
   :group 'convenience)
 
+;;;###autoload
 (defcustom zotelo-default-translator 'BibTeX
   "The name of the default zotero-translator to use (a symbol).
 
@@ -82,6 +94,7 @@ You can set this varialbe interactively with
   :type 'symbol
   :group 'zotelo)
 
+;;;###autoload
 (defcustom zotelo-translators
   '((BibTeX "9cb70025-a888-4a29-a210-93ec52da40d4" "bib")
     (BibLaTeX "ba4cd274-f24e-42cf-8ff2-ccfc603aacf3" "bib")
@@ -208,6 +221,7 @@ if(zotelo_collection){
 
   "Command to get last modification date of the collection.")
 
+;;;###autoload
 (define-minor-mode zotelo-minor-mode
   "zotelo minor mode for interaction with Firefox.
 With no argument, this command toggles the mode.
@@ -301,7 +315,7 @@ The following keys are bound in this minor mode:
       )))
 
 
-
+;;;###autoload
 (defun zotelo-export-secondary ()
   "Export zotero collection into  secondary BibTeX database.
 
@@ -337,7 +351,7 @@ Error if zotero collection is not found by MozRepl"
                                 (symbol-name zotelo-default-translator))))))
       
   
-
+;;;###autoload
 (defun zotelo-update-database (&optional check-zotero-change bibfile id)
   "Update the primary BibTeX database associated with the current buffer.
 
@@ -414,7 +428,9 @@ Through an error if zotero collection has not been found by MozRepl"
 For example \\bibliography{file1,file2} or \\zotelo{file1,file2}
 both specify that file1 is a primary database and file2 is the
 secondary one. 
-")
+"
+  :group 'zotelo
+  :type 'list)
   
 
 (defun zotelo--locate-bibliography-files ()
@@ -433,7 +449,7 @@ secondary one.
                           (buffer-substring-no-properties (match-beginning 3) (match-end 3)))
                         "[ \t\n\r]*,[ \t\n\r]*"))))
 
-
+;;;###autoload
 (defun zotelo-set-collection (&optional prompt no-update no-file-local)
   "Ask for a zotero collection.
 Ido interface is used by default. If you don't like it set `zotelo-use-ido' to nil.
@@ -509,7 +525,7 @@ the end of the file.
     )
   )
 
-
+;;;###autoload
 (defun zotelo-reset ()
   "Reset zotelo."
   (interactive)
@@ -645,6 +661,7 @@ Note that you have to start the MozRepl server from Firefox."
 (defvar moz-verbose nil
   "If t print informative statements.")
 
+;;;###autoload
 (defun moz-command (com &optional buf)
   "Send the moz-repl  process command COM and delete the output
 from the MozRepl process buffer.  If an optional second argument BUF
