@@ -420,6 +420,8 @@ Through an error if zotero collection has not been found by MozRepl"
 	  (unless (re-search-forward ":MozOK:" nil t)
 	    (error "MozError: \n%s" (buffer-substring-no-properties (point) (point-max))))
           ))
+      (let ((buf (get-file-buffer bibfile)))
+        (when buf (with-current-buffer buf (revert-buffer 'no-auto 'no-conf))))
       (message "'%s' updated successfully (%s)" (file-name-nondirectory bibfile) zotelo-default-translator)
       id)
     )
