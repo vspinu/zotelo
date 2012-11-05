@@ -6,7 +6,7 @@ Zotelo can be used in conjunction with any emacs mode but is primarily intended 
 Installation
 ===========
 
-Download [zotelo.el](https://raw.github.com/vitoshka/zotelo/master/zotelo.el) and put it into your emacs path. You may want to use the [Melpa](http://melpa.milkbox.net/) package archive to install `zotelo` programmatically. `Zotelo` package is updated from the upstream branch daily at every commit. If you don't use `Melpa` and want to give it a try please consider reading the official [documentation](http://melpa.milkbox.net/#installing).
+Download [zotelo.el](https://raw.github.com/vitoshka/zotelo/master/zotelo.el) and put it into your emacs path. Alternatively, you may want to use the [Melpa](http://melpa.milkbox.net/) package archive to install `zotelo` programmatically. `Zotelo` package is updated from the upstream branch daily at every commit. If you don't use `Melpa` and want to give it a try please consider reading the official [documentation](http://melpa.milkbox.net/#installing).
 
 Install [MozRepl](https://addons.mozilla.org/en-US/firefox/addon/mozrepl/) extension for Firefox and start it (you can also configure it for auto-start).
 
