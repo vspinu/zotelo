@@ -6,9 +6,11 @@ Zotelo can be used in conjunction with any emacs mode but is primarily intended 
 Installation
 ===========
 
-Download [zotelo.el](https://raw.github.com/vitoshka/zotelo/master/zotelo.el) and put it into your emacs path. Install [MozRepl](https://addons.mozilla.org/en-US/firefox/addon/mozrepl/) extension for Firefox and start it (you can also configure it for  auto-start).
+Download [zotelo.el](https://raw.github.com/vitoshka/zotelo/master/zotelo.el) and put it into your emacs path. Alternatively, you may want to use the [Melpa](http://melpa.milkbox.net/) package archive to install `zotelo` programmatically. `Zotelo` package is updated from the upstream branch daily at every commit. If you don't use `Melpa` and want to give it a try please consider reading the official [documentation](http://melpa.milkbox.net/#installing).
 
-Though `zotelo` doesn't depend on [RefTex](http://www.gnu.org/software/auctex/reftex.html), you would really want it when working with `BibTeX`. `RefTeX` comes with [AucTeX](http://www.gnu.org/s/auctex/). 
+Install [MozRepl](https://addons.mozilla.org/en-US/firefox/addon/mozrepl/) extension for Firefox and start it (you can also configure it for auto-start).
+
+Though `zotelo` doesn't depend on [RefTex](http://www.gnu.org/software/auctex/reftex.html), you would really want it when working with `BibTeX`. `RefTeX` comes with [AucTeX](http://www.gnu.org/s/auctex/).
 
 Activate `zotelo-minor-mode` in `latex-mode`:
 
