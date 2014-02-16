@@ -99,7 +99,7 @@ You can set this varialbe interactively with
 ;;;###autoload
 (defcustom zotelo-translators
   '((BibTeX "9cb70025-a888-4a29-a210-93ec52da40d4" "bib")
-    (BibLaTeX "ba4cd274-f24e-42cf-8ff2-ccfc603aacf3" "bib")
+    (BibLaTeX "b6e39b57-8942-4d11-8259-342c46ce395f" "bib")
     (BibLaTeX-cite "fe7a85a9-4cb5-4986-9cc3-e6b47d6660f7" "bib")
     (Zotero-RDF "14763d24-8ba0-45df-8f52-b8d1108e7ac9" "rdf")
     (Wikipedia "3f50aaac-7acc-4350-acd0-59cb77faf620" "txt")
@@ -118,7 +118,6 @@ Not all of the listed translatros are the default zotero
 translators. You have to search and download them yourself.
 
 Standard BibTeX (zotero): '9cb70025-a888-4a29-a210-93ec52da40d4'
-BibLaTeX (downloaded from https://code.google.com/p/zotero-biblatex-export/): 'ba4cd274-f24e-42cf-8ff2-ccfc603aacf3'
 "
   :group 'zotelo
   :type 'alist
