@@ -99,7 +99,7 @@ You can set this varialbe interactively with
 ;;;###autoload
 (defcustom zotelo-translators
   '((BibTeX "9cb70025-a888-4a29-a210-93ec52da40d4" "bib")
-    (BibLaTeX "ba4cd274-f24e-42cf-8ff2-ccfc603aacf3" "bib")
+    (BibLaTeX "b6e39b57-8942-4d11-8259-342c46ce395f" "bib")
     (BibLaTeX-cite "fe7a85a9-4cb5-4986-9cc3-e6b47d6660f7" "bib")
     (Zotero-RDF "14763d24-8ba0-45df-8f52-b8d1108e7ac9" "rdf")
     (Wikipedia "3f50aaac-7acc-4350-acd0-59cb77faf620" "txt")
@@ -118,7 +118,6 @@ Not all of the listed translatros are the default zotero
 translators. You have to search and download them yourself.
 
 Standard BibTeX (zotero): '9cb70025-a888-4a29-a210-93ec52da40d4'
-BibLaTeX (downloaded from https://code.google.com/p/zotero-biblatex-export/): 'ba4cd274-f24e-42cf-8ff2-ccfc603aacf3'
 "
   :group 'zotelo
   :type 'alist
@@ -384,8 +383,10 @@ Through an error if zotero collection has not been found by MozRepl"
       (setq bibfile file-name)
       (message "Using '%s' filename for %s export." file-name zotelo-default-translator)
       )
-    
-    (setq bibfile (concat (expand-file-name bibfile) "." (nth 2 translator)))
+
+	(if (string-match (concat "\\." (nth 2 translator) "$") bibfile)
+		(setq bibfile (expand-file-name bibfile))
+	  (setq bibfile (concat (expand-file-name bibfile) "." (nth 2 translator))))
     (setq bib-last-change (nth 5 (file-attributes bibfile))) ;; nil if bibfile does not exist
     (setq bibfile (replace-regexp-in-string "\\\\" "\\\\"
 					    (convert-standard-filename bibfile) nil 'literal))
@@ -435,7 +436,7 @@ Through an error if zotero collection has not been found by MozRepl"
     )
   )
 
-(defcustom zotelo-bibliography-commands '("bibliography" "nobibliography" "zotelo")
+(defcustom zotelo-bibliography-commands '("bibliography" "nobibliography" "zotelo" "addbibresource")
   "List of commands which specify databases to use.
 
 For example \\bibliography{file1,file2} or \\zotelo{file1,file2}
