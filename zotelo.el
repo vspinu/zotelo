@@ -384,8 +384,10 @@ Through an error if zotero collection has not been found by MozRepl"
       (setq bibfile file-name)
       (message "Using '%s' filename for %s export." file-name zotelo-default-translator)
       )
-    
-    (setq bibfile (concat (expand-file-name bibfile) "." (nth 2 translator)))
+
+	(if (string-match (concat "\\." (nth 2 translator) "$") bibfile)
+		(setq bibfile (expand-file-name bibfile))
+	  (setq bibfile (concat (expand-file-name bibfile) "." (nth 2 translator))))
     (setq bib-last-change (nth 5 (file-attributes bibfile))) ;; nil if bibfile does not exist
     (setq bibfile (replace-regexp-in-string "\\\\" "\\\\"
 					    (convert-standard-filename bibfile) nil 'literal))
@@ -435,7 +437,7 @@ Through an error if zotero collection has not been found by MozRepl"
     )
   )
 
-(defcustom zotelo-bibliography-commands '("bibliography" "nobibliography" "zotelo")
+(defcustom zotelo-bibliography-commands '("bibliography" "nobibliography" "zotelo" "addbibresource")
   "List of commands which specify databases to use.
 
 For example \\bibliography{file1,file2} or \\zotelo{file1,file2}
