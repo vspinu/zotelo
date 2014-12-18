@@ -390,6 +390,8 @@ Through an error if zotero collection has not been found by MozRepl"
     (setq bib-last-change (nth 5 (file-attributes bibfile))) ;; nil if bibfile does not exist
     (setq bibfile (replace-regexp-in-string "\\\\" "\\\\"
 					    (convert-standard-filename bibfile) nil 'literal))
+    (unless (file-exists-p (file-name-directory bibfile))
+      (error "Directory '%s' does not exist; create it first." (file-name-directory bibfile)))
     ;; Add cygwin support.
     ;; "C:\\foo\\test.bib" workes with javascript.
     ;; while "/foo/test.bib" "C:\cygwin\foo\test.bib" and "C:/cygwin/foo/test.bib" don't
@@ -402,8 +404,6 @@ Through an error if zotero collection has not been found by MozRepl"
       (zotelo-set-collection "Zotero collection is not set. Choose one: " 'no-update)
       (setq id (zotelo--get-local-collection-id)))
     
-    (unless (file-exists-p (file-name-directory bibfile))
-      (error "Directory '%s' does not exist; create it first." (file-name-directory bibfile)))
     (when check-zotero-change
       (set-time-zone-rule t)
       (with-current-buffer (moz-command (format zotelo--dateModified-js id))
