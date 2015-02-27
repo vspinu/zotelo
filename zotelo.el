@@ -123,13 +123,13 @@ You can set this variable interactively with
 `zotelo-set-charset'."
   :group 'zotelo
   :type '(string :tag "Charset")
-  :safe t)
+  :safe 'string-or-null-p)
 
-(defvar zotelo--get-zotero-database-js
+(defconst zotelo--get-zotero-database-js
   "var zotelo_zotero = Components.classes['@zotero.org/Zotero;1'].getService(Components.interfaces.nsISupports).wrappedJSObject;
 zotelo_zotero.getZoteroDatabase().path;")
 
-(defvar zotelo--get-zotero-storage-js
+(defconst zotelo--get-zotero-storage-js
   "var zotelo_zotero = Components.classes['@zotero.org/Zotero;1'].getService(Components.interfaces.nsISupports).wrappedJSObject;
 zotelo_zotero.getStorageDirectory().path;")
 
@@ -154,7 +154,7 @@ zotelo_zotero.getStorageDirectory().path;")
       (goto-char (point-max))
       (insert (format "\n zotelo message [%s]\n %s\n" (current-time-string) str)))))
 
-(defvar zotelo--render-collection-js
+(defconst zotelo--render-collection-js
   "var zotelo_render_collection = function() {
     var R=%s;
     var Zotero = Components.classes['@zotero.org/Zotero;1'].getService(Components.interfaces.nsISupports).wrappedJSObject;
@@ -174,7 +174,7 @@ zotelo_zotero.getStorageDirectory().path;")
 "
   )
 
-(defvar zotelo--render-translators-js
+(defconst zotelo--render-translators-js
   "var zotelo_render_translators = function() {
     var R=%s;
     var Zotero = Components.classes['@zotero.org/Zotero;1'].getService(Components.interfaces.nsISupports).wrappedJSObject;
@@ -188,7 +188,7 @@ zotelo_zotero.getStorageDirectory().path;")
 ")
 
 
-(defvar zotelo--render-charsets-js
+(defconst zotelo--render-charsets-js
   "var R = %s;
 zoteloAllCharsets = CharsetMenu.getData().pinnedCharsets.concat(CharsetMenu.getData().otherCharsets);
 for each (var cs in zoteloAllCharsets) {
@@ -199,7 +199,7 @@ for each (var cs in zoteloAllCharsets) {
 ;;;; moz-repl splits long commands. Need to send it partially, but then errors
 ;;;; in first parts are not visible ... :(
 ;;;; todo: insert the check dirrectly in moz-command ??? 
-(defvar zotelo--export-collection-js
+(defconst zotelo--export-collection-js
   "
 var zotelo_filename=('%s');
 var zotelo_id = %s;
@@ -234,7 +234,7 @@ zotelo_out;
   "Command to be sent to zotero request export."
   )
 
-(defvar zotelo--dateModified-js
+(defconst zotelo--dateModified-js
   "var zotelo_zotero = Components.classes['@zotero.org/Zotero;1'].getService(Components.interfaces.nsISupports).wrappedJSObject;
 var zotelo_id = %s;
 var zotelo_collection = zotelo_zotero.Collections.get(zotelo_id);
