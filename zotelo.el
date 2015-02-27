@@ -90,11 +90,40 @@ variable `zotelo-auto-update'. See
 
 Must correspond to one of the labels of the translators in Zotero.
 
-You can set this varialbe interactively with
+You can set this variable interactively with
 `zotelo-set-translator'.
 "
   :type 'symbol
   :group 'zotelo)
+
+(defcustom zotelo-translator-charsets
+  '((BibTeX . "Western")
+    (Default . "Unicode"))
+  "Default charsets for exporting bibliography.
+
+List of alists, where the first entry should be the symbol of a
+translator and the second entry the name of the character set
+that should be used by default for this translator to export the
+bibliography. If the symbol `Default' is given for the
+translator, it defines the default character set to be used for
+exporting the bibliography for any translator not listed here."
+  :group 'zotelo
+  :type '(repeat
+          (cons :tag ""
+                (symbol :tag "Translator")
+                (string :tag "   Charset"))))
+
+(defcustom zotelo-charset nil
+  "Charset used for exporting bibliography.
+
+if nil (default), the charset will be determined by the current
+translator and zotelo-translator-charsets.
+
+You can set this variable interactively with
+`zotelo-set-charset'."
+  :group 'zotelo
+  :type '(string :tag "Charset")
+  :safe t)
 
 (defvar zotelo--get-zotero-database-js
   "var zotelo_zotero = Components.classes['@zotero.org/Zotero;1'].getService(Components.interfaces.nsISupports).wrappedJSObject;
@@ -159,6 +188,14 @@ zotelo_zotero.getStorageDirectory().path;")
 ")
 
 
+(defvar zotelo--render-charsets-js
+  "var R = %s;
+zoteloAllCharsets = CharsetMenu.getData().pinnedCharsets.concat(CharsetMenu.getData().otherCharsets);
+for each (var cs in zoteloAllCharsets) {
+    R.print(\"'\" + cs.label + \"' '\" + cs.value + \"'\");
+}")
+
+
 ;;;; moz-repl splits long commands. Need to send it partially, but then errors
 ;;;; in first parts are not visible ... :(
 ;;;; todo: insert the check dirrectly in moz-command ??? 
@@ -184,6 +221,7 @@ if(zotelo_collection){
     zotelo_translator.setLocation(zotelo_file);
     zotelo_translator.setTranslator(zotelo_translator_id);
     zotelo_prefs.setBoolPref('recursiveCollections', true);
+    zotelo_translator.setDisplayOptions({'exportCharset': '%s'});
     zotelo_translator.translate();
     zotelo_prefs.setBoolPref('recursiveCollections', zotelo_recColl);
     zotelo_out=':MozOK:';
@@ -366,6 +404,39 @@ by Zotero, use `txt'"
     (message "Translator set to %s" zotelo-default-translator)))
 
 
+(defun zotelo--get-charsets ()
+  "Get charsets for export from running Zotero instance."
+  (let ((buf (get-buffer-create "*moz-command-output*"))
+	charsets)
+    (moz-command (format zotelo--render-charsets-js
+			 (process-get (zotelo--moz-process) 'moz-prompt))
+                 buf)
+    (with-current-buffer buf
+      (goto-char (point-min))
+      (zotelo--message (format "Charsets:\n %s"
+			       (buffer-substring-no-properties (point-min) (min 500 (point-max)))))
+      (while (re-search-forward "^'\\(.+\\)' '\\(.*\\)'$" nil t)
+	(let ((label (match-string-no-properties 1))
+              (value (match-string-no-properties 2)))
+          (setq charsets (cons (list label value) charsets)))))
+    (if (null charsets)
+        (error "No charsets found or error occured see *moz-command-output* buffer for clues.")
+      (nreverse charsets))))
+
+
+(defun zotelo-set-charset ()
+  "Ask to choose from available character sets for exporting the bibliography.
+
+This function sets the variable `zotelo-charset'."
+  (interactive)
+  (let ((charsets (mapcar (lambda (el) (car el))
+                          (zotelo--get-charsets))))
+    (setq-local zotelo-charset
+                (zotelo--read charsets "Choose Charset: "))
+    (message "Charset for exporting bibliography in Zotero is set to %s"
+             zotelo-charset)))
+
+
 ;;;###autoload
 (defun zotelo-update-database (&optional check-zotero-change bibfile id)
   "Update the primary BibTeX database associated with the current buffer.
@@ -387,6 +458,7 @@ Through an error if zotero collection has not been found by MozRepl"
 		(zotelo--get-local-collection-id)))
         (file-name (file-name-nondirectory (file-name-sans-extension (buffer-file-name))))
         (translator (assoc zotelo-default-translator (zotelo--get-translators)))
+        (charset zotelo-charset) charset-value
         all-colls-p cstr bib-last-change zotero-last-change com com1)
     (unless translator
       (error "Cannot find %s in Zotero's translators" zotelo-default-translator))
@@ -396,6 +468,15 @@ Through an error if zotero collection has not been found by MozRepl"
       (setq bibfile file-name)
       (message "Using '%s' filename for %s export." file-name zotelo-default-translator)
       )
+
+    (unless charset
+      (let ((default-charset (cdr (assoc 'Default zotelo-translator-charsets)))
+            (translator-charset (cdr (assoc (car translator) zotelo-translator-charsets))))
+        (setq charset
+              (if translator-charset
+                  translator-charset
+                default-charset))))
+    (setq charset-value (cadr (assoc charset (zotelo--get-charsets))))
 
     (let ((extension (nth 2 translator)))
       (if (string-match (concat "\\." extension "$") bibfile)
@@ -430,7 +511,7 @@ Through an error if zotero collection has not been found by MozRepl"
                (or (null check-zotero-change)
                    (null bib-last-change)
                    (time-less-p bib-last-change zotero-last-change)))
-      (setq cstr (format zotelo--export-collection-js bibfile id (cadr translator)))
+      (setq cstr (format zotelo--export-collection-js bibfile id (cadr translator) charset-value))
       (zotelo--message (format "Executing command: \n\n (moz-command (format zotelo--export-collection-js '%s' %s))\n\n translated as:\n %s\n"
 			       bibfile id cstr))
       (message "Updating '%s' ..." (file-name-nondirectory bibfile))
