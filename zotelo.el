@@ -125,6 +125,12 @@ You can set this variable interactively with
   :type '(string :tag "Charset")
   :safe 'string-or-null-p)
 
+(defcustom zotelo-use-journal-abbreviation nil
+  "Use journal abbreviations for exporting bibliography."
+  :group 'zotelo
+  :type '(boolean :tag "Use journal abbreviation")
+  :safe 'booleanp)
+
 (defconst zotelo--get-zotero-database-js
   "var zotelo_zotero = Components.classes['@zotero.org/Zotero;1'].getService(Components.interfaces.nsISupports).wrappedJSObject;
 zotelo_zotero.getZoteroDatabase().path;")
@@ -221,7 +227,7 @@ if(zotelo_collection){
     zotelo_translator.setLocation(zotelo_file);
     zotelo_translator.setTranslator(zotelo_translator_id);
     zotelo_prefs.setBoolPref('recursiveCollections', true);
-    zotelo_translator.setDisplayOptions({'exportCharset': '%s'});
+    zotelo_translator.setDisplayOptions({'exportCharset': '%s', 'useJournalAbbreviation': %s});
     zotelo_translator.translate();
     zotelo_prefs.setBoolPref('recursiveCollections', zotelo_recColl);
     zotelo_out=':MozOK:';
@@ -459,6 +465,9 @@ Through an error if zotero collection has not been found by MozRepl"
         (file-name (file-name-nondirectory (file-name-sans-extension (buffer-file-name))))
         (translator (assoc zotelo-default-translator (zotelo--get-translators)))
         (charset zotelo-charset) charset-value
+        (journal-abbr (if zotelo-use-journal-abbreviation
+                          "true"
+                        "false"))
         all-colls-p cstr bib-last-change zotero-last-change com com1)
     (unless translator
       (error "Cannot find %s in Zotero's translators" zotelo-default-translator))
@@ -511,9 +520,9 @@ Through an error if zotero collection has not been found by MozRepl"
                (or (null check-zotero-change)
                    (null bib-last-change)
                    (time-less-p bib-last-change zotero-last-change)))
-      (setq cstr (format zotelo--export-collection-js bibfile id (cadr translator) charset-value))
-      (zotelo--message (format "Executing command: \n\n (moz-command (format zotelo--export-collection-js '%s' %s))\n\n translated as:\n %s\n"
-			       bibfile id cstr))
+      (setq cstr (format zotelo--export-collection-js bibfile id (cadr translator) charset-value journal-abbr))
+      (zotelo--message (format "Executing command: \n\n (moz-command (format zotelo--export-collection-js '%s' %s %s %s %s))\n\n translated as:\n %s\n"
+			       bibfile id (cadr translator) charset-value journal-abbr cstr))
       (message "Updating '%s' ..." (file-name-nondirectory bibfile))
       (setq com (split-string cstr "//split" t))
       (while (setq com1 (pop com))
