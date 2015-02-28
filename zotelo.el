@@ -54,17 +54,53 @@
 (defgroup zotelo nil "Customization for zotelo"
   :group 'convenience)
 
-(defvar zotelo-minor-mode-map
-  (let ((map (make-sparse-keymap)))
-    (define-key map "\C-czu" 'zotelo-update-database)
-    (define-key map "\C-cze" 'zotelo-export-secondary)
-    (define-key map "\C-czs" 'zotelo-set-collection)
-    (define-key map "\C-czc" 'zotelo-set-collection)
-    (define-key map "\C-czm" 'zotelo-mark-for-auto-update)
-    (define-key map "\C-czr" 'zotelo-reset)
-    (define-key map "\C-czt" 'zotelo-set-translator)
-    (define-key map "\C-czT" 'zotelo-toggle-auto-update)
-    map))
+(defcustom zotelo-default-translator 'BibTeX
+  "The name of the default zotero-translator to use (a symbol).
+Must correspond to one of the labels of the translators in
+Zotero. You can set this variable interactively with
+`zotelo-set-translator'."
+  :type 'symbol
+  :group 'zotelo)
+
+(defcustom zotelo-translator-charsets
+  '((BibTeX . "Western")
+    (Default . "Unicode"))
+  "Default charsets for exporting bibliography.
+Alist where the car of each element is a name of a
+translator (symbol) and the cdr is the name of the character
+set (string) that should be used by default for this translator
+to export the bibliography. The special `Default' translator sets
+the character set for all other translators not listed here."
+  :group 'zotelo
+  :type '(repeat
+          (cons :tag ""
+                (symbol :tag "Translator")
+                (string :tag "   Charset"))))
+
+(defcustom zotelo-charset nil
+  "Charset used for exporting bibliography.
+If nil (default), the charset will be determined by the current
+translator and `zotelo-translator-charsets'. You can set the
+buffer local value of this variable interactively with
+`zotelo-set-charset'."
+  :group 'zotelo
+  :type '(string :tag "Charset")
+  :safe 'string-or-null-p)
+
+(defcustom zotelo-use-journal-abbreviation nil
+  "If non-nil, use journal abbreviations for exporting bibliography.
+See https://www.zotero.org/support/kb/journal_abbreviations"
+  :group 'zotelo
+  :type '(boolean :tag "Use journal abbreviation")
+  :safe 'booleanp)
+
+(defcustom zotelo-bibliography-commands '("bibliography" "nobibliography" "zotelo" "addbibresource")
+  "List of commands which specify databases to use.
+For example \\bibliography{file1,file2} or \\zotelo{file1,file2}
+both specify that file1 is a primary database and file2 is the
+secondary one."
+  :group 'zotelo
+  :type 'list)
 
 (defvar zotelo--check-timer nil
   "Global timer executed at `zotelo-check-interval' seconds. ")
@@ -81,53 +117,6 @@ active `zotelo-minor-mode'. If nil the only updated files are
 those with non-nil file local variable `zotelo-auto-update'. See
 `zotelo-mark-for-auto-update'. ")
 
-(defcustom zotelo-default-translator 'BibTeX
-  "The name of the default zotero-translator to use (a symbol).
-Must correspond to one of the labels of the translators in
-Zotero. You can set this variable interactively with
-`zotelo-set-translator'."
-  :type 'symbol
-  :group 'zotelo)
-
-(defcustom zotelo-translator-charsets
-  '((BibTeX . "Western")
-    (Default . "Unicode"))
-  "Default charsets for exporting bibliography.
-List of alists, where the first entry should be the symbol of a
-translator and the second entry the name of the character set
-that should be used by default for this translator to export the
-bibliography. If the symbol `Default' is given for the
-translator, it defines the default character set to be used for
-exporting the bibliography for any translator not listed here."
-  :group 'zotelo
-  :type '(repeat
-          (cons :tag ""
-                (symbol :tag "Translator")
-                (string :tag "   Charset"))))
-
-(defcustom zotelo-charset nil
-  "Charset used for exporting bibliography.
-If nil (default), the charset will be determined by the current
-translator and zotelo-translator-charsets. You can set this
-variable interactively with `zotelo-set-charset'."
-  :group 'zotelo
-  :type '(string :tag "Charset")
-  :safe 'string-or-null-p)
-
-(defcustom zotelo-use-journal-abbreviation nil
-  "Use journal abbreviations for exporting bibliography."
-  :group 'zotelo
-  :type '(boolean :tag "Use journal abbreviation")
-  :safe 'booleanp)
-
-(defconst zotelo--get-zotero-database-js
-  "var zotelo_zotero = Components.classes['@zotero.org/Zotero;1'].getService(Components.interfaces.nsISupports).wrappedJSObject;
-zotelo_zotero.getZoteroDatabase().path;")
-
-(defconst zotelo--get-zotero-storage-js
-  "var zotelo_zotero = Components.classes['@zotero.org/Zotero;1'].getService(Components.interfaces.nsISupports).wrappedJSObject;
-zotelo_zotero.getStorageDirectory().path;")
-
 (defvar zotelo--auto-update-is-on nil
   "If t zotelo auto updates the collection on changes in zotero database.
   You can toggle it with 'C-c z T'")
@@ -135,6 +124,7 @@ zotelo_zotero.getStorageDirectory().path;")
 (defvar zotelo--ignore-files (list "_region_.tex"))
 
 (defvar zotelo--verbose nil)
+
 (defun zotelo-verbose ()
   "Toggle zotelo debug messages (all printed in *message* buffer)"
   (interactive)
@@ -146,6 +136,18 @@ zotelo_zotero.getStorageDirectory().path;")
       (let ((inhibit-read-only t))
 	(goto-char (point-max))
 	(insert (format "\n zotelo message [%s]\n %s\n" (current-time-string) str))))))
+
+
+
+;;; JAVA SCRIPT
+
+(defconst zotelo--get-zotero-database-js
+  "var zotelo_zotero = Components.classes['@zotero.org/Zotero;1'].getService(Components.interfaces.nsISupports).wrappedJSObject;
+zotelo_zotero.getZoteroDatabase().path;")
+
+(defconst zotelo--get-zotero-storage-js
+  "var zotelo_zotero = Components.classes['@zotero.org/Zotero;1'].getService(Components.interfaces.nsISupports).wrappedJSObject;
+zotelo_zotero.getStorageDirectory().path;")
 
 (defconst zotelo--render-collection-js
   "
@@ -236,6 +238,22 @@ if(zotelo_collection){
    'Collection with the id ' + zotelo_id + ' does not exist.';
 }"
   "Command to get last modification date of the collection.")
+
+
+
+;;; ZOTELO MINOR MODE
+
+(defvar zotelo-minor-mode-map
+  (let ((map (make-sparse-keymap)))
+    (define-key map "\C-czu" 'zotelo-update-database)
+    (define-key map "\C-cze" 'zotelo-export-secondary)
+    (define-key map "\C-czs" 'zotelo-set-collection)
+    (define-key map "\C-czc" 'zotelo-set-collection)
+    (define-key map "\C-czm" 'zotelo-mark-for-auto-update)
+    (define-key map "\C-czr" 'zotelo-reset)
+    (define-key map "\C-czt" 'zotelo-set-translator)
+    (define-key map "\C-czT" 'zotelo-toggle-auto-update)
+    map))
 
 ;;;###autoload
 (define-minor-mode zotelo-minor-mode
@@ -406,8 +424,7 @@ This function sets the variable `zotelo-charset'."
                           (zotelo--get-charsets))))
     (setq-local zotelo-charset
                 (zotelo--read charsets "Choose Charset: "))
-    (message "Charset for exporting bibliography in Zotero is set to %s"
-             zotelo-charset)))
+    (message "Charset was set to %s" zotelo-charset)))
 
 ;;;###autoload
 (defun zotelo-update-database (&optional check-zotero-change bibfile id)
@@ -499,14 +516,6 @@ has not been found by MozRepl"
         (when buf (with-current-buffer buf (revert-buffer 'no-auto 'no-conf))))
       (message "'%s' updated successfully (%s)" (file-name-nondirectory bibfile) zotelo-default-translator)
       id)))
-
-(defcustom zotelo-bibliography-commands '("bibliography" "nobibliography" "zotelo" "addbibresource")
-  "List of commands which specify databases to use.
-For example \\bibliography{file1,file2} or \\zotelo{file1,file2}
-both specify that file1 is a primary database and file2 is the
-secondary one."
-  :group 'zotelo
-  :type 'list)
 
 (defun zotelo--locate-bibliography-files ()
   ;; Scan buffer for bibliography macro and return as a list.
@@ -625,7 +634,7 @@ started, otherwise you will start getting error screens. "
 
 
 
-;;; UTILITIES
+;;; MOZ UTILITIES
 
 (defvar zotelo--moz-host "localhost")
 (defvar zotelo--moz-port 4242)
