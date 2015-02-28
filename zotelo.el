@@ -149,8 +149,9 @@ zotelo_zotero.getStorageDirectory().path;")
 (defun zotelo--message (str)
   (when zotelo--verbose
     (with-current-buffer "*Messages*"
-      (goto-char (point-max))
-      (insert (format "\n zotelo message [%s]\n %s\n" (current-time-string) str)))))
+      (let ((inhibit-read-only t))
+	(goto-char (point-max))
+	(insert (format "\n zotelo message [%s]\n %s\n" (current-time-string) str))))))
 
 (defvar zotelo--render-collection-js
   "var zotelo_render_collection = function() {
