@@ -1,21 +1,20 @@
 Zotelo helps you efficiently export and synchronize local databases (bib, rdf, html, json etc) and [Zotero](http://www.zotero.org) collections directly from emacs.
 
-Zotelo can be used in conjunction with any emacs mode but is primarily intended for latex users of [RefTeX](http://staff.science.uva.nl/~dominik/Tools/reftex/reftex-nutshell.html).
+Zotelo can be used in conjunction with any emacs mode but is primarily intended
+for `LaTeX`/`BibTeX` users of
+[RefTeX](http://staff.science.uva.nl/~dominik/Tools/reftex/reftex-nutshell.html).
 
 
 Installation
 ===========
 
-Download [zotelo.el](https://raw.github.com/vitoshka/zotelo/master/zotelo.el) and put it into your emacs path. Alternatively, you may want to use the [Melpa](http://melpa.milkbox.net/) package archive to install `zotelo` programmatically. `Zotelo` package is updated from the upstream branch daily at every commit. If you don't use `Melpa` and want to give it a try please consider reading the official [documentation](http://melpa.milkbox.net/#installing).
+Install `zotelo` from [Melpa](http://melpa.milkbox.net/) or put [zotelo.el](https://raw.github.com/vitoshka/zotelo/master/zotelo.el) into your emacs path.
 
 Install [MozRepl](https://addons.mozilla.org/en-US/firefox/addon/mozrepl/) extension for Firefox and start it (you can also configure it for auto-start).
 
-Though `zotelo` doesn't depend on [RefTex](http://www.gnu.org/software/auctex/reftex.html), you would really want it when working with `BibTeX`. `RefTeX` comes with [AucTeX](http://www.gnu.org/s/auctex/).
-
-Activate `zotelo-minor-mode` in `latex-mode`:
+Activate `zotelo-minor-mode` in `LaTeX` mode:
 
 ```lisp
-(require 'zotelo)
 (add-hook 'TeX-mode-hook 'zotelo-minor-mode)
 ```
 
@@ -26,11 +25,11 @@ Usage
 
 _*Key-map*_
 ```
-C-c z c         zotelo-set-collection (also C-c z s)
-C-c z u         zotelo-update-database
+C-c z c         zotelo-set-collection (also "C-c z s")
 C-c z e         zotelo-export-secondary
 C-c z r         zotelo-reset
 C-c z t         zotelo-set-translator
+C-c z u         zotelo-update-database
 ```
 
 If a file contains any of the following bibliography declarations:
@@ -40,10 +39,17 @@ If a file contains any of the following bibliography declarations:
 \zotelo{file1, file2, ...}
 \nobibliography{file1, file2, ...}
 ```
-`zotelo` exports the associated Zotero collection as a `file1.XXX` file, otherwise it exports into `[current-file-name].XXX`. `XXX` extension depends on the current translator, which is set to `BibTeX` by default. Use `zotelo-set-translator` to choose the translator. To set the translator permanently customize `zotelo-default-translator` variable. 
 
-To associate a zotero collection with the current buffer type `\C-c z c` (`zotelo-set-collection`). Select `*ALL*` to export
-the whole Zotero library (but beware, if your library is big it might take awhile). Now you can use  `'reftex-citation` (`C-c [`) to insert citations into your file.
+`zotelo` exports the associated Zotero collection as a `file1.xxx` file,
+otherwise it exports into `[current-file-name].xxx`. The extension `xxx` depends
+on the current translator (`BibTeX` by default). Use `zotelo-set-translator` to
+choose the translator. To set the translator permanently customize
+`zotelo-default-translator` variable.
+
+To associate a zotero collection with the current buffer type `C-c z c`
+(`zotelo-set-collection`). Select `*ALL*` to export the whole Zotero library
+(but beware, if your library is big it might take awhile). Now you can use
+`'reftex-citation` (`C-c [`) to insert citations into your file.
 
 Zotelo uses [IDO](http://www.emacswiki.org/emacs/InteractivelyDoThings ) interface for the collection selection:
 
@@ -51,10 +57,8 @@ Zotelo uses [IDO](http://www.emacswiki.org/emacs/InteractivelyDoThings ) interfa
 
 ![zotero_collection](https://github.com/vitoshka/zotelo/raw/master/img/zotero_collection.png)
 
-
-After modifying your zotero collection from the zotero interface, update the exported database with `C-c z u` (`zotelo-update-database`). This is the recommended way.  
-
-Alternatively you can  mark the buffer for automatic update with `C-c z m` (zotelo-mark-for-auto-update). Due to zotero limitations not all changes to the collection are detected. This also doesn't seem to work on Windows (emacs hangs). zotelo auto-updates bibtex files only if `zotelo--auto-update-is-on` is non-nil (default is `nil`). You can always toggle it with `C-c z T`. The minor-mode indicator is *"zx"* if this variable is `nil` and *"ZX"* otherwise.
+After modifying your zotero collection from the zotero interface, update the the
+exported file with `C-c z u` (`zotelo-update-database`).
 
 Multiple Databases and Collections
 ----------------------------------
@@ -65,18 +69,23 @@ Usually one database is enough, but for some projects you might want to use seve
 
 Troubleshooting
 ===============
-If zotxo stoped working for some reason, try `C-c z r`. This will reset moz-repl connection. 
 
-If you get errors or spurious message then switch to `*moz-command-output*` buffer to investigate. Normally you should see something like 
+If for whatever reason zotelo stoped working, try to reset the Moz-Repl
+collection with `C-c z r`. If that doesn't help, switch to
+`*moz-command-output*` buffer. Normally you should see something like
 
 ```
 ....> ":MozOK:"
 repl> 
 ```
 
-Also see the buffer `*zoteloMozRepl*`, this is a primary buffer where mozrepl outputs it's messages. Normally it should be clean and show only the startup message. 
+Also see the buffer `*zoteloMozRepl*`, this is a primary buffer where mozrepl
+outputs it's messages. Normally it should be showing only the startup message.
 
-To further investigate your problem. Toggle `M-x zotelo-verbose RET` and try the problematic `C-c z u`. If case of an error, go to *messages* buffer. You should see womething like this:
+To further investigate your problem. Toggle `M-x zotelo-verbose RET` and try the
+problematic `C-c z u`. If case of an error, go to *messages* buffer. You should
+see womething akin to:
+
 
 ```javascript
 
@@ -113,6 +122,8 @@ prefs.setBoolPref('recursiveCollections', recColl);
 out;
 ```
 
-You can execute this javascript with [moz-repl.el](https://github.com/bard/mozrepl/wiki/Emacs-integration). Zotelo doesn't require _moz-repl_, but the idea is the same -- you must be able to send commands to moz-repl from emacs whatever way.
-
+You can execute this javascript within
+[moz-repl.el](https://github.com/bard/mozrepl/wiki/Emacs-integration) or
+directly in firefox within a
+[firebug](https://addons.mozilla.org/en-US/firefox/addon/firebug/) console.
 
