@@ -6,7 +6,7 @@ for `LaTeX`/`BibTeX` users of
 
 
 Installation
-===========
+============
 
 Install `zotelo` from [Melpa](http://melpa.milkbox.net/) or put [zotelo.el](https://raw.github.com/vitoshka/zotelo/master/zotelo.el) into your emacs path.
 
@@ -32,7 +32,23 @@ C-c z t         zotelo-set-translator
 C-c z u         zotelo-update-database
 ```
 
-If a file contains any of the following bibliography declarations:
+In order to export a zotero collection you need first to associate it with the
+current buffer with `C-c z c` (`zotelo-set-collection`). Select `*ALL*` to
+export the whole Zotero library.
+
+Zotelo uses [IDO](http://www.emacswiki.org/emacs/InteractivelyDoThings ) interface for the collection selection:
+
+![set_collection](https://github.com/vitoshka/zotelo/raw/master/img/set_collection.png)
+
+![zotero_collection](https://github.com/vitoshka/zotelo/raw/master/img/zotero_collection.png)
+
+After modifying your zotero collection from the zotero interface, update the the
+local database file with `C-c z u` (`zotelo-update-database`).
+
+Exported File Names
+-------------------
+
+If the current file contains any of the following bibliography declarations:
 
 ```tex
 \bibliography{file1, file2, ...}
@@ -42,23 +58,10 @@ If a file contains any of the following bibliography declarations:
 
 `zotelo` exports the associated Zotero collection as a `file1.xxx` file,
 otherwise it exports into `[current-file-name].xxx`. The extension `xxx` depends
-on the current translator (`BibTeX` by default). Use `zotelo-set-translator` to
-choose the translator. To set the translator permanently customize
-`zotelo-default-translator` variable.
+on the current translator (`BibTeX` by default). Use `zotelo-set-translator`
+(`C-c z t`) to choose the translator. To set the translator permanently
+customize `zotelo-default-translator` variable.
 
-To associate a zotero collection with the current buffer type `C-c z c`
-(`zotelo-set-collection`). Select `*ALL*` to export the whole Zotero library
-(but beware, if your library is big it might take awhile). Now you can use
-`'reftex-citation` (`C-c [`) to insert citations into your file.
-
-Zotelo uses [IDO](http://www.emacswiki.org/emacs/InteractivelyDoThings ) interface for the collection selection:
-
-![set_collection](https://github.com/vitoshka/zotelo/raw/master/img/set_collection.png)
-
-![zotero_collection](https://github.com/vitoshka/zotelo/raw/master/img/zotero_collection.png)
-
-After modifying your zotero collection from the zotero interface, update the the
-exported file with `C-c z u` (`zotelo-update-database`).
 
 Multiple Databases and Collections
 ----------------------------------
