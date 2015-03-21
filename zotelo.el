@@ -506,7 +506,7 @@ has not been found by MozRepl"
       (setq com (split-string cstr "//split" t))
       (while (setq com1 (pop com))
 	(when com ;; append to all except the last one
-	  (setq com1 (concat com1 "\":MozOk:\"")))
+	  (setq com1 (concat com1 "\":MozOK:\"")))
 	(with-current-buffer (moz-command com1)
 	  (goto-char (point-min))
 	  (unless (re-search-forward ":MozOK:" nil t)
