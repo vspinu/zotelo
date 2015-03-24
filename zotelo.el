@@ -5,7 +5,7 @@
 ;; Maintainer: Spinu Vitalie
 ;; Copyright (C) 2011-2012, Spinu Vitalie, all rights reserved.
 ;; Created: Oct 2 2011
-;; Version: 1.2
+;; Version: 1.3
 ;; URL: https://github.com/vitoshka/zotelo
 ;; Keywords: zotero, emacs, reftex, bibtex, MozRepl, bibliography manager
 ;;
