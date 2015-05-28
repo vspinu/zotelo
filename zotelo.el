@@ -199,6 +199,8 @@ for each (var cs in zoteloAllCharsets) {
 var zotelo_filename=('%s');
 var zotelo_id = %s;
 var zotelo_translator_id = '%s';
+var charset = '%s';
+var jabrev = %s;
 var zotelo_prefs = Components.classes['@mozilla.org/preferences-service;1'].getService(Components.interfaces.nsIPrefService).getBranch('extensions.zotero.');
 var zotelo_file = Components.classes['@mozilla.org/file/local;1'].createInstance(Components.interfaces.nsILocalFile);
 var zotelo_recColl = zotelo_prefs.getBoolPref('recursiveCollections');
@@ -216,7 +218,7 @@ if(zotelo_collection){
     zotelo_translator.setLocation(zotelo_file);
     zotelo_translator.setTranslator(zotelo_translator_id);
     zotelo_prefs.setBoolPref('recursiveCollections', true);
-    zotelo_translator.setDisplayOptions({'exportCharset': '%s', 'useJournalAbbreviation': %s});
+    zotelo_translator.setDisplayOptions({'exportCharset': charset, 'useJournalAbbreviation': jabrev});
     zotelo_translator.translate();
     zotelo_prefs.setBoolPref('recursiveCollections', zotelo_recColl);
     zotelo_out=':MozOK:';
@@ -449,11 +451,7 @@ has not been found by MozRepl"
 		(zotelo--get-local-collection-id)))
         (file-name (file-name-nondirectory (file-name-sans-extension (buffer-file-name))))
         (translator (assoc zotelo-default-translator (zotelo--get-translators)))
-        (charset zotelo-charset) charset-value
-        (journal-abbr (if zotelo-use-journal-abbreviation
-                          "true"
-                        "false"))
-        all-colls-p cstr bib-last-change zotero-last-change com com1)
+        all-colls-p bib-last-change zotero-last-change)
     (unless translator
       (error "Cannot find %s in Zotero's translators" zotelo-default-translator))
 
@@ -461,11 +459,6 @@ has not been found by MozRepl"
       ;; (setq file-name (concat file-name "."))
       (setq bibfile file-name)
       (message "Using '%s' filename for %s export." file-name zotelo-default-translator))
-
-    (setq charset (or charset
-		      (cdr (assoc (car translator) zotelo-translator-charsets))
-		      (cdr (assoc 'Default zotelo-translator-charsets))))
-    (setq charset-value (cadr (assoc charset (zotelo--get-charsets))))
 
     (let ((extension (nth 2 translator)))
       (if (string-match (concat "\\." extension "$") bibfile)
@@ -499,21 +492,32 @@ has not been found by MozRepl"
                (or (null check-zotero-change)
                    (null bib-last-change)
                    (time-less-p bib-last-change zotero-last-change)))
-      (setq cstr (format zotelo--export-collection-js bibfile id (cadr translator) charset-value journal-abbr))
-      (zotelo--message (format "Executing command: \n\n (moz-command (format zotelo--export-collection-js '%s' %s %s %s %s))\n\n translated as:\n %s\n"
-			       bibfile id (cadr translator) charset-value journal-abbr cstr))
-      (message "Updating '%s' ..." (file-name-nondirectory bibfile))
-      (setq com (split-string cstr "//split" t))
-      (while (setq com1 (pop com))
-	(when com ;; append to all except the last one
-	  (setq com1 (concat com1 "\":MozOK:\"")))
-	(with-current-buffer (moz-command com1)
-	  (goto-char (point-min))
-	  (unless (re-search-forward ":MozOK:" nil t)
-	    (error "MozError: \n%s" (buffer-substring-no-properties (point) (point-max))))
-          ))
+
+      (let* ((charset (or zotelo-charset
+			  (cdr (assoc (car translator) zotelo-translator-charsets))
+			  (cdr (assoc 'Default zotelo-translator-charsets))))
+	     (charset (cadr (assoc charset (zotelo--get-charsets))))
+	     (journal-abbr (if zotelo-use-journal-abbreviation
+			       "true"
+			     "false"))
+	     (cstr (format zotelo--export-collection-js
+			   bibfile id (cadr translator) charset journal-abbr))
+	     (msg  (format "Executing command: \n\n (moz-command (format zotelo--export-collection-js '%s' %s %s %s %s))\n\n translated as:\n %s\n"
+			   bibfile id (cadr translator) charset journal-abbr cstr))
+	     (com (split-string cstr "//split" t))
+	     (com1))
+	(zotelo--message msg)
+	(message "Updating '%s' ..." (file-name-nondirectory bibfile))
+	(while (setq com1 (pop com))
+	  (when com ;; append to all except the last one
+	    (setq com1 (concat com1 "\":MozOK:\"")))
+	  (with-current-buffer (moz-command com1)
+	    (goto-char (point-min))
+	    (unless (re-search-forward ":MozOK:" nil t)
+	      (error "MozError: \n%s" (buffer-substring-no-properties (point) (point-max)))))))
+      
       (let ((buf (get-file-buffer bibfile)))
-        (when buf (with-current-buffer buf (revert-buffer 'no-auto 'no-conf))))
+	(when buf (with-current-buffer buf (revert-buffer 'no-auto 'no-conf))))
       (message "'%s' updated successfully (%s)" (file-name-nondirectory bibfile) zotelo-default-translator)
       id)))
 
