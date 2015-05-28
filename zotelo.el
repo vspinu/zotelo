@@ -398,28 +398,30 @@ by Zotero, use `txt'"
                                 (symbol-name zotelo-default-translator))))
     (message "Translator set to %s" zotelo-default-translator)))
 
+(defvar zotelo--cached-charsets nil)
 (defun zotelo--get-charsets ()
-  "Get charsets for export from running Zotero instance."
-  (let ((buf (get-buffer-create "*moz-command-output*"))
-	charsets)
-    (moz-command (format zotelo--render-charsets-js
-			 (process-get (zotelo--moz-process) 'moz-prompt))
-                 buf)
-    (with-current-buffer buf
-      (goto-char (point-min))
-      (zotelo--message (format "Charsets:\n %s"
-			       (buffer-substring-no-properties (point-min) (min 500 (point-max)))))
-      (while (re-search-forward "^'\\(.+\\)' '\\(.*\\)'$" nil t)
-	(let ((label (match-string-no-properties 1))
-              (value (match-string-no-properties 2)))
-          (setq charsets (cons (list label value) charsets)))))
-    (if (null charsets)
-        (error "No charsets found or error occured see *moz-command-output* buffer for clues.")
-      (nreverse charsets))))
+  "Get charsets (character encoding) for export from running Zotero instance."
+  (or zotelo--cached-charsets
+      (let ((buf (get-buffer-create "*moz-command-output*"))
+	    charsets)
+	(moz-command (format zotelo--render-charsets-js
+			     (process-get (zotelo--moz-process) 'moz-prompt))
+		     buf)
+	(with-current-buffer buf
+	  (goto-char (point-min))
+	  (zotelo--message (format "Charsets:\n %s"
+				   (buffer-substring-no-properties (point-min) (min 500 (point-max)))))
+	  (while (re-search-forward "^'\\(.+\\)' '\\(.*\\)'$" nil t)
+	    (let ((label (match-string-no-properties 1))
+		  (value (match-string-no-properties 2)))
+	      (setq charsets (cons (list label value) charsets)))))
+	(if (null charsets)
+	    (error "No charsets found or error occured see *moz-command-output* buffer for clues.")
+	  (setq zotelo--cached-charsets (nreverse charsets))))))
 
+;;;###autoload
 (defun zotelo-set-charset ()
   "Ask to choose from available character sets for exporting the bibliography.
-;;;###autoload
 This function sets the variable `zotelo-charset'."
   (interactive)
   (let ((charsets (mapcar (lambda (el) (car el))
@@ -460,13 +462,9 @@ has not been found by MozRepl"
       (setq bibfile file-name)
       (message "Using '%s' filename for %s export." file-name zotelo-default-translator))
 
-    (unless charset
-      (let ((default-charset (cdr (assoc 'Default zotelo-translator-charsets)))
-            (translator-charset (cdr (assoc (car translator) zotelo-translator-charsets))))
-        (setq charset
-              (if translator-charset
-                  translator-charset
-                default-charset))))
+    (setq charset (or charset
+		      (cdr (assoc (car translator) zotelo-translator-charsets))
+		      (cdr (assoc 'Default zotelo-translator-charsets))))
     (setq charset-value (cadr (assoc charset (zotelo--get-charsets))))
 
     (let ((extension (nth 2 translator)))
