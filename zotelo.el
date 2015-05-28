@@ -249,6 +249,7 @@ if(zotelo_collection){
     (define-key map "\C-cze" 'zotelo-export-secondary)
     (define-key map "\C-czs" 'zotelo-set-collection)
     (define-key map "\C-czc" 'zotelo-set-collection)
+    (define-key map "\C-czC" 'zotelo-set-charset)
     (define-key map "\C-czm" 'zotelo-mark-for-auto-update)
     (define-key map "\C-czr" 'zotelo-reset)
     (define-key map "\C-czt" 'zotelo-set-translator)
@@ -418,6 +419,7 @@ by Zotero, use `txt'"
 
 (defun zotelo-set-charset ()
   "Ask to choose from available character sets for exporting the bibliography.
+;;;###autoload
 This function sets the variable `zotelo-charset'."
   (interactive)
   (let ((charsets (mapcar (lambda (el) (car el))
