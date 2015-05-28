@@ -139,7 +139,7 @@ those with non-nil file local variable `zotelo-auto-update'. See
 
 
 
-;;; JAVA SCRIPT
+;;; JAVASCRIPT
 
 (defconst zotelo--get-zotero-database-js
   "var zotelo_zotero = Components.classes['@zotero.org/Zotero;1'].getService(Components.interfaces.nsISupports).wrappedJSObject;
@@ -226,7 +226,7 @@ if(zotelo_collection){
 //split
 zotelo_out;
 "
-  "Command to be sent to zotero request export.")
+  "Command sent to zotero for export request.")
 
 (defconst zotelo--dateModified-js
   "var zotelo_zotero = Components.classes['@zotero.org/Zotero;1'].getService(Components.interfaces.nsISupports).wrappedJSObject;
