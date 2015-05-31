@@ -185,6 +185,7 @@ for each (var w in translator.getTranslators()) {
 (defconst zotelo--render-charsets-js
   "
 var R = %s;
+Components.utils.import(\"resource://gre/modules/CharsetMenu.jsm\");
 zoteloAllCharsets = CharsetMenu.getData().pinnedCharsets.concat(CharsetMenu.getData().otherCharsets);
 for each (var cs in zoteloAllCharsets) {
     R.print(\"'\" + cs.label + \"' '\" + cs.value + \"'\");
