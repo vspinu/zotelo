@@ -174,7 +174,7 @@ for (g in groups){
 var zotelo_render_translators = function() {
 var R=%s;
 var Zotero = Components.classes['@zotero.org/Zotero;1'].getService(Components.interfaces.nsISupports).wrappedJSObject;
-var translator = new Zotero.Translate('Export');
+var translator = new Zotero.Translate.Export();
 for each (var w in translator.getTranslators()) {
     R.print(\"'\" + w.label + \"' \" +
             w.translatorID + \" '\" +
@@ -209,11 +209,13 @@ zotelo_file.initWithPath(zotelo_filename);
 //split
 var zotelo_zotero = Components.classes['@zotero.org/Zotero;1'].getService(Components.interfaces.nsISupports).wrappedJSObject;
 var zotelo_collection = true;
-var zotelo_translator = new zotelo_zotero.Translate('export');
+var zotelo_translator = new zotelo_zotero.Translate.Export();
 if (zotelo_id != 0){ //not all collections
     zotelo_collection = zotelo_zotero.Collections.get(zotelo_id);
     zotelo_translator.setCollection(zotelo_collection);
-};
+} else {
+    zotelo_translator.setLibraryID(null);
+}
 //split
 if(zotelo_collection){
     zotelo_translator.setLocation(zotelo_file);
