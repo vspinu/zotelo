@@ -8,7 +8,7 @@ for `LaTeX`/`BibTeX` users of
 Installation
 ============
 
-Install `zotelo` from [Melpa](http://melpa.milkbox.net/) or put [zotelo.el](https://raw.github.com/vitoshka/zotelo/master/zotelo.el) into your emacs path.
+Install `zotelo` from [Melpa](https://melpa.org/) or put [zotelo.el](https://raw.github.com/vitoshka/zotelo/master/zotelo.el) into your emacs path.
 
 Install [MozRepl](https://addons.mozilla.org/en-US/firefox/addon/mozrepl/) extension for Firefox and start it (you can also configure it for auto-start).
 
