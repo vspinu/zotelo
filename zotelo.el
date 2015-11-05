@@ -8,6 +8,7 @@
 ;; Version: 1.3.9000
 ;; URL: https://github.com/vitoshka/zotelo
 ;; Keywords: zotero, emacs, reftex, bibtex, MozRepl, bibliography manager
+;; Package-Requires: ((cl-lib "0.5"))
 ;;
 ;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;
@@ -50,6 +51,8 @@
 ;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;
 ;;; Code:
+
+(require 'cl-lib)
 
 (defgroup zotelo nil "Customization for zotelo"
   :group 'convenience)
@@ -291,10 +294,10 @@ such as org-mode.
           (setq zotelo--check-timer
                 (run-with-idle-timer 5 zotelo-check-interval 'zotelo--check-and-update-all))))
     (unless
-        (loop for b in (buffer-list)
-              for is-zotelo-mode = (buffer-local-value 'zotelo-minor-mode b)
-              until is-zotelo-mode
-              finally return is-zotelo-mode)
+        (cl-loop for b in (buffer-list)
+                 for is-zotelo-mode = (buffer-local-value 'zotelo-minor-mode b)
+                 until is-zotelo-mode
+                 finally return is-zotelo-mode)
       ;; if no more active zotelo mode, cancel the timer and kill the process
       (when (timerp zotelo--check-timer)
         (cancel-timer zotelo--check-timer)
