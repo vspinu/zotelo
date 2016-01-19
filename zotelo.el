@@ -42,7 +42,7 @@
 ;;
 ;; zotelo-mode-map lives on  C-c z prefix.
 ;;
-;;   *Instalation*
+;;   *Installation*
 ;;
 ;;   (add-hook 'TeX-mode-hook 'zotelo-minor-mode)
 ;;
