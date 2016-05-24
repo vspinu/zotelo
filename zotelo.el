@@ -328,15 +328,13 @@ such as org-mode.
                       (assoc 'zotelo-auto-update (buffer-local-value 'file-local-variables-alist b))))
                  (if (and zotelo-auto-update-all (null auto-update))
                      (setq auto-update '(t . t)))
-                 (cdr auto-update))
-               )
+                 (cdr auto-update)))
           (with-current-buffer b
             (ignore-errors
               (setq id (zotelo-update-database t))))
           (when id
             (setq out
-                  (append (list (buffer-name b)) out))
-            )))
+                  (append (list (buffer-name b)) out)))))
       (if (> (length out) 0)
           (message "Bibliography updated in %s buffers: %s." (length out) out))
       (when (and (not any-z-buffer-p)
@@ -359,15 +357,15 @@ Throw error if there is only one (primary) file listed in
 found by MozRepl"
   (interactive)
   (let* ((files (zotelo--locate-bibliography-files))
-	 (bibfile (cond
-		   ((< (length files) 2)
+         (bibfile (cond
+                   ((< (length files) 2)
                     (error "No secondary databases (\\bibliography{...} lists contain less than 2 files)."))
-		   ((= (length files) 2)
-		    (cadr files))
-		   (t (zotelo--read (cdr files) "File to update: "))))
-	 (collection (zotelo-set-collection
-		      (format "Export into '%s': " (file-name-nondirectory bibfile))
-		      'no-update 'no-set)))
+                   ((= (length files) 2)
+                    (cadr files))
+                   (t (completing-read "File to update: " (cdr files)))))
+         (collection (zotelo-set-collection
+                      (format "Export into '%s': " (file-name-nondirectory bibfile))
+                      'no-update 'no-set)))
     (zotelo-update-database nil bibfile (get-text-property 0 'zotero-id collection))))
 
 (defun zotelo--get-translators ()
@@ -402,8 +400,8 @@ by Zotero, use `txt'"
   (let ((tnames (mapcar (lambda (el) (symbol-name (car el)))
                         (zotelo--get-translators))))
     (setq zotelo-default-translator
-          (intern (zotelo--read tnames "Choose translator: "
-                                (symbol-name zotelo-default-translator))))
+          (intern (completing-read "Choose translator: " tnames nil nil nil nil 
+                                   (symbol-name zotelo-default-translator))))
     (message "Translator set to %s" zotelo-default-translator)))
 
 (defvar zotelo--cached-charsets nil)
@@ -435,7 +433,7 @@ This function sets the variable `zotelo-charset'."
   (let ((charsets (mapcar (lambda (el) (car el))
                           (zotelo--get-charsets))))
     (setq-local zotelo-charset
-                (zotelo--read charsets "Choose Charset: "))
+                (completing-read "Choose Charset: " charsets))
     (message "Charset was set to %s" zotelo-charset)))
 
 ;;;###autoload
@@ -554,24 +552,23 @@ no-file-local is non-nill don't set file-local variable. Return
 the properized collection name."
   (interactive)
   (let ((buf (get-buffer-create "*moz-command-output*"))
-	colls name id)
+        colls)
     ;; set up the collection list
     (moz-command (format zotelo--render-collection-js
-			 (process-get (zotelo--moz-process) 'moz-prompt)))
+                         (process-get (zotelo--moz-process) 'moz-prompt)))
     (moz-command "zotelo_render_collection()" buf)
     (with-current-buffer buf
       (goto-char (point-min))
       (zotelo--message (format "Collections:\n %s" 
-			       (buffer-substring-no-properties (point-min) (min 500 (point-max)))))
-      (while (re-search-forward "^\\([0-9]+\\) /\\(.*\\)$" nil t)
-	(setq id (match-string-no-properties 1)
-	      name (match-string-no-properties 2))
-	(setq colls (cons
-		     (propertize name 'zotero-id id)
-		     colls))))
+                               (buffer-substring-no-properties (point-min) (min 500 (point-max)))))
+      (let (name id)
+        (while (re-search-forward "^\\([0-9]+\\) /\\(.*\\)$" nil t)
+          (setq id (match-string-no-properties 1)
+                name (match-string-no-properties 2))
+          (setq colls (cons (cons name id) colls)))))
 
     (if (null colls)
-	(error "No collections found or error occured see *moz-command-output* buffer for clues.")
+        (error "No collections found or error occured see *moz-command-output* buffer for clues.")
       ;; (setq colls (mapcar 'remove-text-properties colls))
       (setq name (zotelo--read (cons (propertize "*ALL*" 'zotero-id "0") (nreverse colls))
 			       prompt))
@@ -622,26 +619,6 @@ started, otherwise you will start getting error screens. "
 
 (defun zotelo--get-local-collection-id ()
   (cdr (assoc 'zotero-collection file-local-variables-alist)))
-
-(defun zotelo--read (collections &optional prompt default)
-  "Read a choice from zotero collections via Ido."
-  (let (reset-ido)
-    (when  (and (require 'ido)
-		(not ido-mode))
-      ;; ido initialization
-      (setq reset-ido t)
-      (ido-init-completion-maps)
-      (add-hook 'minibuffer-setup-hook 'ido-minibuffer-setup)
-      (add-hook 'choose-completion-string-functions 'ido-choose-completion-string)
-      (add-hook 'kill-emacs-hook 'ido-kill-emacs-hook))
-    (unwind-protect
-	(ido-completing-read (or prompt "Collection: ") collections
-			     nil t nil nil default)
-      (when reset-ido
-	(remove-hook 'minibuffer-setup-hook 'ido-minibuffer-setup)
-	(remove-hook 'choose-completion-string-functions 'ido-choose-completion-string)
-	(remove-hook 'kill-emacs-hook 'ido-kill-emacs-hook)))))
-
 
 
 ;;; MOZ UTILITIES
