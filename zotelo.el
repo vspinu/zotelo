@@ -570,17 +570,17 @@ the properized collection name."
     (if (null colls)
         (error "No collections found or error occured see *moz-command-output* buffer for clues.")
       ;; (setq colls (mapcar 'remove-text-properties colls))
-      (setq name (zotelo--read (cons (propertize "*ALL*" 'zotero-id "0") (nreverse colls))
-			       prompt))
-      (unless no-file-local
-	(save-excursion
-	  (add-file-local-variable 'zotero-collection
-				   (propertize (get-text-property 0 'zotero-id name)
-					       'name (substring-no-properties name)))
-	  (hack-local-variables))
-	(unless no-update
-	  (zotelo-update-database)))
-      name)))
+      (let* ((colls (cons (cons "*ALL*" "0") (nreverse colls)))
+             (name (completing-read (or prompt "Collection: ") (mapcar #'car colls)))
+             (id (or (cdr (assoc name colls))
+                     (error "Null id for collection '%s'. Please see *moz-command-output* for clues." name))))
+        (unless no-file-local
+          (save-excursion
+            (add-file-local-variable 'zotero-collection (propertize id 'name name))
+            (hack-local-variables))
+          (unless no-update
+            (zotelo-update-database)))
+       name))))
 
 (defun zotelo-mark-for-auto-update (&optional unmark)
   "Mark current file for auto-update.
