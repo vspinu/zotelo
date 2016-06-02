@@ -451,8 +451,7 @@ has not been found by MozRepl"
   (let ((bibfile (or bibfile
 		     (car (zotelo--locate-bibliography-files))))
         (proc  (zotelo--moz-process))
-        (id (or id
-		(zotelo--get-local-collection-id)))
+        (id (or id (zotelo--get-local-collection-id)))
         (file-name (file-name-nondirectory (file-name-sans-extension (buffer-file-name))))
         (translator (assoc zotelo-default-translator (zotelo--get-translators)))
         all-colls-p bib-last-change zotero-last-change)
@@ -618,7 +617,8 @@ started, otherwise you will start getting error screens. "
   (setq zotelo--auto-update-is-on (not zotelo--auto-update-is-on)))
 
 (defun zotelo--get-local-collection-id ()
-  (cdr (assoc 'zotero-collection file-local-variables-alist)))
+  (or (and (boundp 'zotero-collection) zotero-collection)
+      (cdr (assoc 'zotero-collection file-local-variables-alist))))
 
 
 ;;; MOZ UTILITIES
